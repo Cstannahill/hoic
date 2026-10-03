@@ -28,7 +28,7 @@ export default async function TimePage() {
                 {new Date(shift.started_at).toLocaleTimeString()} - {shift.ended_at ? new Date(shift.ended_at).toLocaleTimeString() : 'Now'}
               </div>
               <div className="text-xs mt-1 bg-secondary text-secondary-foreground inline-block px-2 py-0.5 rounded">
-                {(shift.properties as any)?.name || 'Unknown Property'}
+                {(shift.properties as { name: string } | null)?.name || 'Unknown Property'}
               </div>
             </div>
             <div className="text-right">

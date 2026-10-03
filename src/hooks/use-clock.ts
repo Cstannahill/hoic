@@ -8,6 +8,8 @@ type LocationStatus = 'captured' | 'denied' | 'timeout'
 export function useClock() {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isRetry, setIsRetry] = useState(false)
+  const [operationId, setOperationId] = useState<string | null>(null)
 
   const getLocation = async (): Promise<{ lat: number | null, lng: number | null, acc: number | null, status: LocationStatus }> => {
     // If config says don't require geolocation, skip it to save time/privacy
@@ -42,11 +44,18 @@ export function useClock() {
     setIsPending(true)
     setError(null)
     const loc = await getLocation()
-    const operationId = crypto.randomUUID()
+    const opId = isRetry && operationId ? operationId : crypto.randomUUID()
+    setOperationId(opId)
     
-    const res = await clockIn(propertyId, loc.lat, loc.lng, loc.acc, loc.status, operationId)
+    const res = await clockIn(propertyId, loc.lat, loc.lng, loc.acc, loc.status, opId)
     setIsPending(false)
-    if (res.error) setError(res.error)
+    if (res.error) {
+      setError(res.error)
+      setIsRetry(true)
+    } else {
+      setIsRetry(false)
+      setOperationId(null)
+    }
     return res
   }
 
@@ -54,13 +63,20 @@ export function useClock() {
     setIsPending(true)
     setError(null)
     const loc = await getLocation()
-    const operationId = crypto.randomUUID()
+    const opId = isRetry && operationId ? operationId : crypto.randomUUID()
+    setOperationId(opId)
     
-    const res = await clockOut(loc.lat, loc.lng, loc.acc, loc.status, operationId)
+    const res = await clockOut(loc.lat, loc.lng, loc.acc, loc.status, opId)
     setIsPending(false)
-    if (res.error) setError(res.error)
+    if (res.error) {
+      setError(res.error)
+      setIsRetry(true)
+    } else {
+      setIsRetry(false)
+      setOperationId(null)
+    }
     return res
   }
 
-  return { handleClockIn, handleClockOut, isPending, error }
+  return { handleClockIn, handleClockOut, isPending, error, isRetry, setError }
 }

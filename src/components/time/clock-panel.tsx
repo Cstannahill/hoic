@@ -4,17 +4,25 @@ import { useClock } from '@/hooks/use-clock'
 import { useState } from 'react'
 
 export function ClockPanel({ activeShift, properties }: { activeShift: any, properties: any[] }) {
-  const { handleClockIn, handleClockOut, isPending, error } = useClock()
+  const { handleClockIn, handleClockOut, isPending, error, isRetry, setError } = useClock()
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties.length === 1 ? properties[0].id : '')
 
   const onClockIn = async () => {
-    if (!selectedPropertyId) return alert('Please select a property first')
+    if (properties.length === 0) {
+      return setError('No active properties available.')
+    }
+    if (!selectedPropertyId) {
+      return setError('Please select a property first.')
+    }
     await handleClockIn(selectedPropertyId)
   }
 
+  const inButtonText = isPending ? 'Saving...' : (isRetry ? 'Not confirmed - Retry' : 'Clock In')
+  const outButtonText = isPending ? 'Saving...' : (isRetry ? 'Not confirmed - Retry' : 'Clock Out')
+
   return (
     <div className="flex flex-col gap-6 items-center justify-center p-4">
-      {error && <div className="text-destructive font-semibold bg-destructive/10 p-4 rounded-md">{error}</div>}
+      {error && <div className="text-destructive font-semibold bg-destructive/10 p-4 rounded-md text-center max-w-sm">{error}</div>}
       
       {activeShift ? (
         <div className="flex flex-col items-center gap-4">
@@ -22,9 +30,9 @@ export function ClockPanel({ activeShift, properties }: { activeShift: any, prop
           <button 
             disabled={isPending}
             onClick={handleClockOut}
-            className="w-48 h-48 rounded-full bg-destructive text-destructive-foreground text-2xl font-bold shadow-lg hover:opacity-90 disabled:opacity-50 transition"
+            className="w-48 h-48 rounded-full bg-destructive text-destructive-foreground text-xl md:text-2xl font-bold shadow-lg hover:opacity-90 disabled:opacity-50 transition"
           >
-            {isPending ? 'Saving...' : 'Clock Out'}
+            {outButtonText}
           </button>
         </div>
       ) : (
@@ -32,7 +40,10 @@ export function ClockPanel({ activeShift, properties }: { activeShift: any, prop
           {properties.length > 1 && (
             <select 
               value={selectedPropertyId} 
-              onChange={e => setSelectedPropertyId(e.target.value)}
+              onChange={e => {
+                setSelectedPropertyId(e.target.value)
+                setError(null)
+              }}
               className="w-full max-w-sm p-4 border border-border bg-input rounded-md mb-4 text-lg"
             >
               <option value="" disabled>Select a property</option>
@@ -42,11 +53,11 @@ export function ClockPanel({ activeShift, properties }: { activeShift: any, prop
             </select>
           )}
           <button 
-            disabled={isPending || (!selectedPropertyId && properties.length > 1)}
+            disabled={isPending || properties.length === 0}
             onClick={onClockIn}
-            className="w-48 h-48 rounded-full bg-primary text-primary-foreground text-2xl font-bold shadow-lg hover:opacity-90 disabled:opacity-50 transition"
+            className="w-48 h-48 rounded-full bg-primary text-primary-foreground text-xl md:text-2xl font-bold shadow-lg hover:opacity-90 disabled:opacity-50 transition"
           >
-            {isPending ? 'Saving...' : 'Clock In'}
+            {inButtonText}
           </button>
         </div>
       )}

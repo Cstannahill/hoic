@@ -19,9 +19,9 @@ export default async function ManagePage() {
           <div key={shift.id} className="bg-card p-4 rounded-lg shadow-sm border border-border">
             <div className="flex justify-between items-start">
               <div>
-                <div className="font-semibold text-lg">{(shift.members as any)?.first_name} {(shift.members as any)?.last_name}</div>
+                <div className="font-semibold text-lg">{(shift.members as { first_name: string; last_name: string } | null)?.first_name} {(shift.members as { first_name: string; last_name: string } | null)?.last_name}</div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  At: <span className="font-medium text-foreground">{(shift.properties as any)?.name || 'Unknown'}</span>
+                  At: <span className="font-medium text-foreground">{(shift.properties as { name: string } | null)?.name || 'Unknown'}</span>
                 </div>
               </div>
               <div className={`px-2 py-1 rounded text-xs font-bold ${shift.status === 'working' ? 'bg-primary/20 text-primary' : 'bg-amber-500/20 text-amber-500'}`}>
