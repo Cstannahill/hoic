@@ -15,13 +15,22 @@ export default async function LoginPage() {
   const signInWithGoogle = async () => {
     'use server'
     const supabase = await createClient()
-    const origin = (await headers()).get('origin')
+    const headersList = await headers()
+    const host = headersList.get('x-forwarded-host') || headersList.get('host')
+    const protocol = headersList.get('x-forwarded-proto') || 'http'
+    const origin = `${protocol}://${host}`
+    
+    console.log('--- Google SignIn ---')
+    console.log('Host:', host)
+    console.log('Origin:', origin)
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${origin}/auth/callback`,
       },
     })
+    console.log('OAuth data:', data)
     
     if (data.url) {
       redirect(data.url)
