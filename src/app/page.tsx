@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { ClockPanel } from '@/components/time/clock-panel'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -9,24 +10,29 @@ export default async function Home() {
     redirect('/login')
   }
 
+  // Fetch active shift
+  const { data: activeShifts } = await supabase
+    .from('shifts')
+    .select('*')
+    .eq('member_id', user.id)
+    .in('status', ['working', 'on_break'])
+    .limit(1)
+  
+  const activeShift = activeShifts && activeShifts.length > 0 ? activeShifts[0] : null
+
+  // Fetch properties
+  const { data: properties } = await supabase
+    .from('properties')
+    .select('id, name')
+    .eq('active', true)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center min-h-screen bg-background p-4">
-      <main className="w-full max-w-3xl flex-col items-center justify-center p-8 bg-card rounded-xl shadow-lg border border-border">
-        <h1 className="text-3xl font-bold mb-4 text-primary text-center">Welcome to HOIC!</h1>
-        <p className="text-center text-muted-foreground mb-8">
-          You are successfully logged in as <strong className="text-foreground">{user.email}</strong>
-        </p>
+    <div className="flex flex-col flex-1 items-center justify-center min-h-full bg-background p-4">
+      <main className="w-full max-w-lg flex flex-col items-center justify-center p-8 bg-card rounded-xl shadow-lg border border-border">
+        <h1 className="text-3xl font-bold mb-4 text-primary text-center">Time Clock</h1>
         
-        <form action={async () => {
-          'use server'
-          const supabase = await createClient()
-          await supabase.auth.signOut()
-          redirect('/login')
-        }} className="flex justify-center">
-          <button type="submit" className="bg-destructive text-destructive-foreground px-6 py-2 rounded-md font-semibold hover:opacity-90 transition">
-            Sign Out
-          </button>
-        </form>
+        <ClockPanel activeShift={activeShift} properties={properties || []} />
+
       </main>
     </div>
   )

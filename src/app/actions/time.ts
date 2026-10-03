@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-type LocationStatus = 'ok' | 'denied' | 'timeout'
+type LocationStatus = 'captured' | 'denied' | 'timeout'
 
 export async function clockIn(propertyId: string, lat: number | null, lng: number | null, acc: number | null, status: LocationStatus, operationId: string) {
   const supabase = await createClient()

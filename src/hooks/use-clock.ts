@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { clockIn, clockOut } from '@/app/actions/time'
 
-type LocationStatus = 'ok' | 'denied' | 'timeout'
+type LocationStatus = 'captured' | 'denied' | 'timeout'
 
 export function useClock() {
   const [isPending, setIsPending] = useState(false)
@@ -12,7 +12,7 @@ export function useClock() {
   const getLocation = async (): Promise<{ lat: number | null, lng: number | null, acc: number | null, status: LocationStatus }> => {
     // If config says don't require geolocation, skip it to save time/privacy
     if (process.env.NEXT_PUBLIC_REQUIRE_GEOLOCATION === 'false') {
-      return { lat: null, lng: null, acc: null, status: 'ok' }
+      return { lat: null, lng: null, acc: null, status: 'captured' }
     }
 
     if (!navigator.geolocation) {
@@ -26,7 +26,7 @@ export function useClock() {
             lat: Number(pos.coords.latitude.toFixed(3)),
             lng: Number(pos.coords.longitude.toFixed(3)),
             acc: pos.coords.accuracy,
-            status: 'ok'
+            status: 'captured'
           })
         },
         (err) => {
