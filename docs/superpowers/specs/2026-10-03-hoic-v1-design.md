@@ -86,25 +86,28 @@ Requirements doc §9 tables, with these resolutions:
 - `clock_events.event_type` enum `clock_in | clock_out | break_start | break_end`. Immutable after insert.
 - `event_locations` (clock_in / clock_out only): `latitude numeric(6,3)`, `longitude numeric(7,3)` (the database also rounds as a defense), `source_accuracy_m`, `captured_at`, `status` enum `captured | denied | timeout | unsupported | unavailable`, `expires_at = captured_at + 90 days` (or `server_recorded_at` when not captured), `purged_at`. **Purge nulls coordinates and accuracy and sets `purged_at`**, so the status history remains.
 - `correction_requests.kind` enum `amend | missed_shift`. `amend` references a shift; `missed_shift` carries `property_id`. `proposed` jsonb = `{ started_at, ended_at, breaks: [{started_at, ended_at}] }` — a full replacement timeline. Status `pending | approved | rejected | withdrawn`.
-- `supply_items.property_id` nullable (null = general). `urgency` enum `low | normal | urgent`. `status` enum `needed | claimed | purchased | cancelled`. Plus `purchased_by`, `version`.
+- `supply_items` is **one crew-wide list** (no property picker). `property_id` is nullable and **recorded in the background** by `add_supply`: the property of the adder's open shift; otherwise the only active property if there is exactly one; otherwise null. It is shown only as a small label and in history and CSV/reporting views, never as an input. `stored_in text` is nullable and optional (max 60 chars; trimmed; empty → null). `urgency` enum `low | normal | urgent`. `status` enum `needed | claimed | purchased | cancelled`. Plus `purchased_by`, `purchased_at`, `version`.
 - `tasks.priority` enum `low | normal | high`. `status` enum `todo | in_progress | blocked | done | cancelled`. Plus `version`.
-- `crews`: single row; `timezone 'America/Chicago'`, `currency 'USD'`, `reporting_week_start 1` (Monday).
+- `crews`: single row; `timezone 'America/Chicago'`, `currency 'USD'`, `reporting_week_start 1` (Monday), `stale_shift_hours 9`.
+- `audit_events.self_override boolean default false`.
 
 ## 5. Rules resolved beyond the requirements doc
 
 | Topic | Decision |
 |---|---|
-| Self-review | Nobody may approve/reject their own correction request or directly correct/void their own shift (`self_review_forbidden`). The foreman and Christian review each other. |
-| Stale open shift | Open longer than 14 hours → flagged on `/manage` and on the worker's Home. Never auto-closed. |
+| Self-review | Foremen and workers may not approve/reject their own correction request, directly correct/void their own shift, or set their own rate (`self_review_forbidden`). **Admin override:** an admin may do these on their own records only by passing `p_self_override = true` with a required reason; the UI shows an explicit "Override: acting on my own record" confirmation. The audit record is flagged `self_override = true` and is visible to foremen in the audit trail. |
+| Stale open shift | Open longer than **9 hours** → flagged on `/manage` and on the worker's Home. Never auto-closed. The threshold is a single constant in the crew record (`stale_shift_hours`, default 9). |
 | Missed clock-out | Worker submits an `amend` request with `ended_at`. A foreman/admin may also close it directly via `correct_shift`. While open, the worker cannot clock in again. |
 | Missed shift | Worker submits a `missed_shift` request. Approval creates a closed shift using the rate effective at its `started_at`, with `corrected = true` and an audit record. No location is created. |
 | Approval | `review_correction` requires the reviewer's `expected_shift_version` (for `amend`) and re-validates the full timeline: no overlap with other non-voided shifts of that member, breaks inside the shift, at most one break open at a time. |
-| Rates | Only foreman/admin set rates, and never their own (`self_review_forbidden`). `effective_from` defaults to now. Each change is audited with a reason. |
+| Rates | Only foreman/admin set rates, and never their own except via the admin override above. `effective_from` defaults to now. Each change is audited with a reason. |
 | Deactivation | Admin sets `members.active = false` through a DB function (audited), then the server action bans the auth user. RLS denies immediately even if an old token remains valid. Unfinished tasks are flagged for reassignment. |
 | Invite | Admin server action: Auth Admin `inviteUserByEmail` (secret key) → `create_member` RPC called with the admin's user-scoped client. If the RPC fails, the auth user is deleted (compensation). |
-| Supplies transitions | `needed→claimed` (any member, `claimed_by` = self); `claimed→needed` (claimer or foreman/admin); `needed/claimed→purchased` (any member, records `purchased_by`); `needed/claimed→cancelled` (requester or foreman/admin). Edits to details require `expected_version`. |
 | Task transitions | Assignee: `todo→in_progress`, `in_progress→blocked` (note required), `blocked→in_progress`, `todo/in_progress→done` (completion note optional). Foreman/admin: any transition, including reopen and cancel, plus scope, assignee, priority, and due date. |
-| Archived property | No new clock-ins, task assignments, or supplies. Archiving is rejected with `property_has_open_shifts` if open shifts exist. |
+| Supplies transitions | `needed→claimed` (any member, `claimed_by` = self); `claimed→needed` (claimer or foreman/admin); `needed/claimed→purchased` (any member, records `purchased_by`/`purchased_at`, optional `stored_in`); `needed/claimed→cancelled` (requester or foreman/admin). Edits to details require `expected_version`. |
+| Stored in | Optional and never required. Can be set when marking purchased or edited later by any active member (`update_supply` with `expected_version`), including clearing it. The UI offers quick-pick chips **Shed · Trailer · Inside · Truck** plus free text. No quantities on hand, no stock ledger. |
+| Archived property | No new clock-ins or task assignments. Archiving is rejected with `property_has_open_shifts` if open shifts exist. (Supplies are unaffected; their property is derived, never chosen.) |
+| Property selection | When exactly one property is active, clock-in selects it automatically and no picker is shown. A picker appears only when several are active. |
 | Audited actions | `correct_shift`, `void_shift`, `review_correction`, `set_hourly_rate`, `set_member_role`, `set_member_active`, `create_member`, `archive_property`, `run_location_purge`. Audit payloads never include coordinates. |
 
 ## 6. Reporting (single implementation)
@@ -133,10 +136,10 @@ The database returns raw shifts, breaks, and rate snapshots. One TypeScript modu
 | Route | Access | Purpose |
 |---|---|---|
 | `/login`, `/auth/confirm`, `/set-password` | public | Sign-in; invite/recovery token verification; set password |
-| `/` | all | Property picker, clock/break controls, live timer, today/week hours and estimate, my open tasks, supplies shortcut, stale-shift warning |
+| `/` | all | Current property (auto-selected; picker only if several are active), clock/break controls, live timer, today/week hours and estimate, my open tasks, supplies shortcut, stale-shift warning |
 | `/time` | all | My shifts by week; request correction (amend / missed shift); my requests |
 | `/tasks` | all | My tasks; status and notes |
-| `/supplies` | all | Shared list by property/urgency; add/claim/release/purchase/cancel; similar-item hints |
+| `/supplies` | all | One crew-wide list grouped by status and urgency; add/claim/release/purchase/cancel; optional, editable "Stored in" on purchased items; similar-item hints |
 | `/profile` | all | Name, crew timezone, location explanation, logout |
 | `/manage` | foreman, admin | Who is working / on break / out, where; stale shifts |
 | `/manage/timesheets` (+ `/export`) | foreman, admin | Weekly timesheet; correct/void; CSV |
@@ -164,7 +167,7 @@ The database returns raw shifts, breaks, and rate snapshots. One TypeScript modu
 | Layer | Tool | Coverage |
 |---|---|---|
 | Unit | Vitest | Reporting math: breaks, rounding, rates, overnight, week boundaries, DST (spring forward / fall back in America/Chicago), remainder allocation; Zod schemas; error mapping |
-| Database | pgTAP | RLS per role per table; location isolation; rate privacy; deactivation; function invariants; idempotency; overlap; stale version; self-review; privileged function grants |
+| Database | pgTAP | RLS per role per table; location isolation; rate privacy; deactivation; function invariants; idempotency; overlap; stale version; self-review; admin self-override (rejected without flag + reason, flagged in audit); supply property derivation and optional `stored_in`; privileged function grants |
 | Concurrency | Vitest integration (real supabase-js clients, local stack) | Parallel clock-ins → one shift; racing corrections → one success; lost-response retry → same timestamp |
 | E2E | Playwright (Pixel 7, iPhone 14 first; one desktop project) | Clock/break/out; denied location; missed clock-out correction; assignment; supply claim/purchase; CSV vs screen totals; no horizontal overflow at 360 px |
 
