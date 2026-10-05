@@ -20,9 +20,7 @@ CREATE TABLE members (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Active members can view all active members" ON members FOR SELECT TO authenticated USING (
-    active = true AND EXISTS (SELECT 1 FROM members m WHERE m.id = auth.uid() AND m.active = true)
-);
+
 
 CREATE TABLE mutation_receipts (
     actor_id uuid NOT NULL,
@@ -41,3 +39,4 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '';
 CREATE FUNCTION private.current_role() RETURNS text AS $$
     SELECT role::text FROM public.members WHERE id = auth.uid() AND active = true;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '';
+CREATE POLICY "Active members can view all active members" ON members FOR SELECT TO authenticated USING (active = true AND private.current_role() IS NOT NULL);
