@@ -1,0 +1,1 @@
+INSERT INTO auth.users (id, email, encrypted_password) VALUES ('00000000-0000-0000-0000-000000000000', 'test@example.com', '\\\.YxNfG8.9R..5H6p4aP7J.wE/A8a/YmK.Z0O9C1V57u') ON CONFLICT DO NOTHING;

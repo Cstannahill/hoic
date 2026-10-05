@@ -1,0 +1,1 @@
+INSERT INTO public.tasks (property_id, assignee_id, status) VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'todo');
