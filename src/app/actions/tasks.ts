@@ -11,14 +11,16 @@ export async function updateTaskStatus(taskId: string, status: string, notes?: s
     payload.notes = notes
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('tasks')
     .update(payload)
     .eq('id', taskId)
+    .select()
+    .single()
 
   if (error) {
     console.error('Error updating task status:', error)
-    return { error: error.message }
+    throw new Error(error.message || 'Unauthorized or invalid transition')
   }
 
   revalidatePath('/tasks')
@@ -29,13 +31,17 @@ export async function updateTaskStatus(taskId: string, status: string, notes?: s
 export async function createTask(formData: FormData) {
   const supabase = await createClient()
   
-  const property_id = formData.get('property_id') as string
-  const assignee_id = formData.get('assignee_id') as string
-  const priority = formData.get('priority') as string
-  const due_date = formData.get('due_date') as string || null
-  const notes = formData.get('notes') as string || null
+  const property_id = formData.get('property_id')?.toString()
+  const assignee_id = formData.get('assignee_id')?.toString()
+  const priority = formData.get('priority')?.toString()
+  const due_date = formData.get('due_date')?.toString() || null
+  const notes = formData.get('notes')?.toString() || null
 
-  const { data, error } = await supabase
+  if (!property_id || !assignee_id || !priority) {
+    throw new Error('Missing required fields')
+  }
+
+  const { error } = await supabase
     .from('tasks')
     .insert({
       property_id,
@@ -48,7 +54,7 @@ export async function createTask(formData: FormData) {
 
   if (error) {
     console.error('Error creating task:', error)
-    return { error: error.message }
+    throw new Error(error.message)
   }
 
   revalidatePath('/manage/tasks')
