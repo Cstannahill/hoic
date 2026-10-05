@@ -15,12 +15,21 @@ export async function requestSupply(formData: FormData) {
     throw new Error('Description is required')
   }
 
+  // Derive property_id from current open shift quietly
+  const { data: activeShift } = await supabase
+    .from('shifts')
+    .select('property_id')
+    .eq('member_id', user.id)
+    .is('end_time', null)
+    .single()
+
   const { error } = await supabase
     .from('supplies')
     .insert({
       description: description.trim(),
       urgency,
-      requested_by: user.id
+      requested_by: user.id,
+      property_id: activeShift?.property_id || null
     })
 
   if (error) throw new Error(error.message)
@@ -51,6 +60,8 @@ export async function claimSupply(id: string, version: number) {
 
 export async function releaseSupply(id: string, version: number) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not logged in')
 
   const { error } = await supabase
     .from('supplies')
@@ -92,6 +103,8 @@ export async function purchaseSupply(id: string, version: number, storedIn?: str
 
 export async function cancelSupply(id: string, version: number) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not logged in')
 
   const { error } = await supabase
     .from('supplies')
@@ -109,12 +122,14 @@ export async function cancelSupply(id: string, version: number) {
 
 export async function updateStoredLocation(formData: FormData) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not logged in')
   
   const id = formData.get('id')?.toString()
   const version = parseInt(formData.get('version')?.toString() || '0')
-  const stored_in = formData.get('stored_in')?.toString()
+  const stored_in = formData.get('stored_in')?.toString() || null // Allow null/empty clearing
 
-  if (!id || !version || !stored_in) throw new Error('Missing required fields')
+  if (!id || !version) throw new Error('Missing required fields')
 
   const { error } = await supabase
     .from('supplies')

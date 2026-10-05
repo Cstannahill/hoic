@@ -12,6 +12,7 @@ CREATE TABLE public.supplies (
     purchased_by uuid REFERENCES public.members(id) ON DELETE SET NULL,
     purchased_at timestamptz,
     stored_in text,
+    property_id uuid REFERENCES public.properties(id) ON DELETE SET NULL,
     version integer NOT NULL DEFAULT 1
 );
 
@@ -66,5 +67,7 @@ CREATE POLICY "Members can update supplies based on status rules" ON public.supp
         -- Ensure critical fields are not maliciously altered during these transitions
         (SELECT s.requested_by FROM public.supplies s WHERE s.id = supplies.id) = requested_by AND
         (SELECT s.description FROM public.supplies s WHERE s.id = supplies.id) = description AND
+        (SELECT s.urgency FROM public.supplies s WHERE s.id = supplies.id) = urgency AND
+        (SELECT s.property_id FROM public.supplies s WHERE s.id = supplies.id) IS NOT DISTINCT FROM property_id AND
         ((SELECT s.status FROM public.supplies s WHERE s.id = supplies.id) = 'purchased' OR status = 'purchased' OR (SELECT s.stored_in FROM public.supplies s WHERE s.id = supplies.id) IS NOT DISTINCT FROM stored_in)
     );
