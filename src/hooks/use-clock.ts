@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import { clockIn, clockOut, startBreak, endBreak } from '@/app/actions/time'
+import { addMutation } from '@/lib/offline-queue'
+import { useSync } from '@/components/providers/sync-provider'
+import { toast } from 'sonner'
 
 type LocationStatus = 'captured' | 'denied' | 'timeout'
 
@@ -10,6 +13,7 @@ export function useClock() {
   const [error, setError] = useState<string | null>(null)
   const [isRetry, setIsRetry] = useState(false)
   const [operationId, setOperationId] = useState<string | null>(null)
+  const { isOffline, refreshQueue } = useSync()
 
   const getLocation = async (): Promise<{ lat: number | null, lng: number | null, acc: number | null, status: LocationStatus }> => {
     // If config says don't require geolocation, skip it to save time/privacy
@@ -40,6 +44,36 @@ export function useClock() {
     })
   }
 
+  const runWithOfflineSupport = async (actionName: any, payload: any, serverAction: () => Promise<any>) => {
+    if (isOffline) {
+      await addMutation({ action: actionName, payload })
+      await refreshQueue()
+      return { error: undefined, offline: true }
+    }
+    
+    try {
+      const res = await serverAction()
+      if (res.error) {
+        // If fetch failed, fallback to offline queue
+        if (res.error.includes('fetch') || res.error.includes('network') || res.error.includes('Network')) {
+          toast.warning('Network slow. Action saved offline.')
+          await addMutation({ action: actionName, payload })
+          await refreshQueue()
+          return { error: undefined, offline: true }
+        }
+      }
+      return res
+    } catch (e: any) {
+      if (e.message?.includes('fetch') || e.message?.includes('network')) {
+        toast.warning('Network slow. Action saved offline.')
+        await addMutation({ action: actionName, payload })
+        await refreshQueue()
+        return { error: undefined, offline: true }
+      }
+      return { error: e.message }
+    }
+  }
+
   const handleClockIn = async (propertyId: string) => {
     setIsPending(true)
     setError(null)
@@ -47,7 +81,8 @@ export function useClock() {
     const opId = isRetry && operationId ? operationId : crypto.randomUUID()
     setOperationId(opId)
     
-    const res = await clockIn(propertyId, loc.lat, loc.lng, loc.acc, loc.status, opId)
+    const res = await runWithOfflineSupport('clock_in', { propertyId, ...loc, opId }, () => clockIn(propertyId, loc.lat, loc.lng, loc.acc, loc.status, opId))
+    
     setIsPending(false)
     if (res.error) {
       setError(res.error)
@@ -66,7 +101,8 @@ export function useClock() {
     const opId = isRetry && operationId ? operationId : crypto.randomUUID()
     setOperationId(opId)
     
-    const res = await clockOut(loc.lat, loc.lng, loc.acc, loc.status, opId)
+    const res = await runWithOfflineSupport('clock_out', { ...loc, opId }, () => clockOut(loc.lat, loc.lng, loc.acc, loc.status, opId))
+    
     setIsPending(false)
     if (res.error) {
       setError(res.error)
@@ -83,7 +119,10 @@ export function useClock() {
     setError(null)
     const opId = isRetry && operationId ? operationId : crypto.randomUUID()
     setOperationId(opId)
-    const res = kind === 'start' ? await startBreak(opId) : await endBreak(opId)
+    
+    const actionName = kind === 'start' ? 'start_break' : 'end_break'
+    const res = await runWithOfflineSupport(actionName, { opId }, () => kind === 'start' ? startBreak(opId) : endBreak(opId))
+    
     setIsPending(false)
     if (res.error) {
       setError(res.error)

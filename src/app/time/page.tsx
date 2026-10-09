@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Clock } from 'lucide-react'
 import { paidMs, centsFor } from '@/features/reporting/shifts'
+import { CorrectionForm } from '@/components/time/correction-form'
 
 export default async function TimePage() {
   const { supabase, user } = await requireMember()
@@ -19,7 +20,7 @@ export default async function TimePage() {
     .order('started_at', { ascending: false })
     .limit(50)
 
-  const shifts = (recentShifts ?? []) as unknown as (RawShift & { properties: { name: string } | null, id: number })[]
+  const shifts = (recentShifts ?? []) as unknown as (RawShift & { properties: { name: string } | null })[]
   
   return (
     <PageContainer>
@@ -45,11 +46,14 @@ export default async function TimePage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right flex flex-row md:flex-col items-center md:items-end justify-between gap-2">
+                  <div className="text-right flex flex-col items-end gap-1 w-full md:w-auto mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-border">
                     {shift.status === 'closed' ? (
                       <>
-                        <div className="font-bold text-lg text-primary">{formatCents(cents)}</div>
-                        <div className="text-sm font-medium text-muted-foreground">{formatHours(ms)}h</div>
+                        <div className="flex gap-4 md:gap-1 w-full md:w-auto justify-between md:justify-end items-center md:flex-col">
+                          <div className="font-bold text-lg text-primary">{formatCents(cents)}</div>
+                          <div className="text-sm font-medium text-muted-foreground">{formatHours(ms)}h</div>
+                        </div>
+                        <CorrectionForm shiftId={shift.id.toString()} />
                       </>
                     ) : (
                       <>

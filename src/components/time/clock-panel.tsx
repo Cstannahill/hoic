@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useClock } from '@/hooks/use-clock'
 import { formatDuration, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useSync } from '@/components/providers/sync-provider'
 
 type Property = { id: string; name: string }
 type ActiveShift = { id: string; status: 'working' | 'on_break'; started_at: string; property_name?: string | null }
@@ -23,15 +24,44 @@ export function ClockPanel({
   priorBreakMs?: number
 }) {
   const { handleClockIn, handleClockOut, handleBreak, isPending, error, isRetry, setError } = useClock()
+  const { mutations } = useSync()
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties.length === 1 ? properties[0].id : '')
   const router = useRouter()
-  const now = useNow(activeShift ? 1000 : null)
 
-  const run = async (fn: () => Promise<{ error?: string }>, ok: string) => {
+  // Compute optimistic active shift based on offline mutations
+  let optimisticShift = activeShift
+  let optBreakStartedAt = breakStartedAt
+
+  const sortedMutations = [...mutations].sort((a, b) => a.timestamp - b.timestamp)
+  for (const m of sortedMutations) {
+    if (m.action === 'clock_in') {
+      const pName = properties.find(p => p.id === m.payload.propertyId)?.name
+      optimisticShift = {
+        id: 'opt_' + m.id,
+        status: 'working',
+        started_at: new Date(m.timestamp).toISOString(),
+        property_name: pName
+      }
+      optBreakStartedAt = null
+    } else if (m.action === 'clock_out') {
+      optimisticShift = null
+      optBreakStartedAt = null
+    } else if (m.action === 'start_break' && optimisticShift) {
+      optimisticShift = { ...optimisticShift, status: 'on_break' }
+      optBreakStartedAt = m.timestamp
+    } else if (m.action === 'end_break' && optimisticShift) {
+      optimisticShift = { ...optimisticShift, status: 'working' }
+      optBreakStartedAt = null
+    }
+  }
+
+  const now = useNow(optimisticShift ? 1000 : null)
+
+  const run = async (fn: () => Promise<{ error?: string, offline?: boolean }>, ok: string) => {
     const res = await fn()
     if (!res.error) {
-      toast.success(ok)
-      router.refresh()
+      toast.success(res.offline ? ok + ' (Saved Offline)' : ok)
+      if (!res.offline) router.refresh()
     }
   }
 
@@ -41,10 +71,10 @@ export function ClockPanel({
     await run(() => handleClockIn(selectedPropertyId), 'Clocked in. Have a good shift!')
   }
 
-  const startedMs = activeShift ? +new Date(activeShift.started_at) : 0
-  const onBreakMs = breakStartedAt ? now - breakStartedAt : 0
-  const workedMs = activeShift ? now - startedMs - priorBreakMs - onBreakMs : 0
-  const retryLabel = 'Not confirmed — Retry'
+  const startedMs = optimisticShift ? +new Date(optimisticShift.started_at) : 0
+  const onBreakMs = optBreakStartedAt ? now - optBreakStartedAt : 0
+  const workedMs = optimisticShift ? now - startedMs - priorBreakMs - onBreakMs : 0
+  const retryLabel = 'Not confirmed - Retry'
 
   return (
     <div className="flex w-full flex-col items-center gap-5">
@@ -54,44 +84,44 @@ export function ClockPanel({
         </div>
       )}
 
-      {activeShift ? (
+      {optimisticShift ? (
         <>
           <div className="text-center">
-            <p className={cn('text-sm font-semibold uppercase tracking-wider', activeShift.status === 'on_break' ? 'text-[#fabd2f]' : 'text-[#b8bb26]')}>
-              {activeShift.status === 'on_break' ? 'On break' : 'Clocked in'}
+            <p className={cn('text-sm font-semibold uppercase tracking-wider', optimisticShift.status === 'on_break' ? 'text-[#fabd2f]' : 'text-[#b8bb26]')}>
+              {optimisticShift.status === 'on_break' ? 'On break' : 'Clocked in'}
             </p>
             <p className="tabular mt-1 text-5xl font-bold" aria-live="off" data-testid="shift-timer">
-              {formatDuration(activeShift.status === 'on_break' ? onBreakMs : workedMs)}
+              {formatDuration(optimisticShift.status === 'on_break' ? onBreakMs : workedMs)}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {activeShift.status === 'on_break'
+              {optimisticShift.status === 'on_break'
                 ? <>Worked {formatDuration(workedMs)} so far</>
-                : <>Since {formatTime(activeShift.started_at)}</>}
-              {activeShift.property_name && <> · <MapPin className="inline size-3.5 -mt-0.5" /> {activeShift.property_name}</>}
+                : <>Since {formatTime(optimisticShift.started_at)}</>}
+              {optimisticShift.property_name && <> • <MapPin className="inline size-3.5 -mt-0.5" /> {optimisticShift.property_name}</>}
             </p>
           </div>
 
           <div className="grid w-full grid-cols-2 gap-3">
-            {activeShift.status === 'working' ? (
+            {optimisticShift.status === 'working' ? (
               <BigButton tone="warning" disabled={isPending} onClick={() => run(() => handleBreak('start'), 'Break started')} icon={Coffee}>
-                {isPending ? 'Saving…' : isRetry ? retryLabel : 'Start break'}
+                {isPending ? 'Saving.' : isRetry ? retryLabel : 'Start break'}
               </BigButton>
             ) : (
               <BigButton tone="primary" disabled={isPending} onClick={() => run(() => handleBreak('end'), 'Back to work')} icon={Play}>
-                {isPending ? 'Saving…' : isRetry ? retryLabel : 'End break'}
+                {isPending ? 'Saving.' : isRetry ? retryLabel : 'End break'}
               </BigButton>
             )}
             <BigButton
               tone="danger"
               disabled={isPending}
               onClick={() => {
-                if (activeShift.status === 'on_break' || window.confirm('Clock out and end your shift?')) {
+                if (optimisticShift?.status === 'on_break' || window.confirm('Clock out and end your shift?')) {
                   run(handleClockOut, 'Clocked out. Nice work!')
                 }
               }}
               icon={LogOut}
             >
-              {isPending ? 'Saving…' : isRetry ? retryLabel : 'Clock out'}
+              {isPending ? 'Saving.' : isRetry ? retryLabel : 'Clock out'}
             </BigButton>
           </div>
         </>
@@ -119,9 +149,9 @@ export function ClockPanel({
             className="flex size-44 flex-col items-center justify-center gap-2 rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-lg ring-8 ring-primary/20 transition hover:brightness-110 active:scale-95 disabled:opacity-50"
           >
             {isPending ? <Loader2 className="size-8 animate-spin" /> : isRetry ? <RotateCcw className="size-8" /> : <LogIn className="size-8" />}
-            {isPending ? 'Saving…' : isRetry ? 'Retry' : 'Clock in'}
+            {isPending ? 'Saving.' : isRetry ? 'Retry' : 'Clock in'}
           </button>
-          {isRetry && <p className="text-xs text-muted-foreground">Not confirmed — tap to retry safely.</p>}
+          {isRetry && <p className="text-xs text-muted-foreground">Not confirmed - tap to retry safely.</p>}
         </>
       )}
     </div>

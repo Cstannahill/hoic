@@ -41,18 +41,56 @@ export default async function ManageTimesheetsPage() {
 
   const sortedGroups = Array.from(memberTotals.values()).sort((a, b) => b.ms - a.ms)
 
+  // Fetch pending corrections
+  const { data: corrections } = await supabase
+    .from('shift_corrections')
+    .select('*, members!shift_corrections_requested_by_fkey(first_name, last_name), shifts(started_at, ended_at, properties(name))')
+    .eq('status', 'pending')
+
   return (
     <PageContainer>
       <PageHeader 
         title="Weekly Timesheets" 
         description={`Current period: ${weekStart.toLocaleDateString()} - Now`}
         actions={
-          <Button variant="outline" disabled title="CSV export coming soon">
-            <Download className="size-4 mr-2" /> Export CSV
-          </Button>
+          <form action="/api/export/timesheets" method="GET">
+            <Button variant="outline" type="submit">
+              <Download className="size-4 mr-2" /> Export CSV
+            </Button>
+          </form>
         }
       />
 
+      {corrections && corrections.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 text-[#fb4934]">Pending Corrections ({corrections.length})</h2>
+          <div className="grid gap-4">
+            {corrections.map((c: any) => (
+              <Card key={c.id} className="border-destructive/20 bg-destructive/5">
+                <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <div className="font-semibold">{c.members.first_name} {c.members.last_name}</div>
+                    <div className="text-sm mt-1">"{c.details}"</div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Shift: {new Date(c.shifts.started_at).toLocaleDateString()} @ {c.shifts.properties?.name || 'Unknown'}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <form action={async () => { 'use server'; await require('@/app/actions/corrections').rejectCorrection(c.id) }}>
+                      <Button variant="outline" size="sm" type="submit">Reject</Button>
+                    </form>
+                    <form action={async () => { 'use server'; await require('@/app/actions/corrections').approveCorrection(c.id) }}>
+                      <Button variant="default" size="sm" type="submit">Approve</Button>
+                    </form>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="text-lg font-bold mb-4">Crew Totals</h2>
       <div className="space-y-4">
         {sortedGroups.length > 0 ? (
           sortedGroups.map(group => (

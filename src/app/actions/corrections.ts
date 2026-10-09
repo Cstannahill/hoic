@@ -1,26 +1,46 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { requireMember } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 
-export async function submitCorrection(shiftId: string | null, details: string) {
-  const supabase = await createClient()
+export async function requestCorrection(formData: FormData) {
+  const { supabase, user } = await requireMember()
   
-  // Note: in a real implementation this would call `correct_shift` RPC
-  // However, v1 schema might not have the correct_shift RPC fully implemented, 
-  // or it might just write to a corrections table.
-  // We'll call the rpc assuming it was built or mock a write.
-  const { data, error } = await supabase.rpc('correct_shift', {
-    p_shift_id: shiftId,
-    p_notes: details
-  })
-
-  if (error) {
-    // If the RPC isn't built yet in this v1 subset, just ignore for now as it's a UI mockup phase
-    console.error('Correction error:', error)
-    return { error: error.message }
+  const shiftId = formData.get('shift_id') as string
+  const details = formData.get('details') as string
+  
+  if (!shiftId || !details.trim()) {
+    throw new Error('Shift ID and details are required')
   }
 
+  const { error } = await supabase.from('shift_corrections').insert({
+    shift_id: shiftId,
+    requested_by: user.id,
+    details: details.trim()
+  })
+
+  if (error) throw new Error(error.message)
   revalidatePath('/time')
-  return { data }
+}
+
+export async function approveCorrection(correctionId: string) {
+  const { supabase, member } = await requireMember()
+  if (member.role !== 'foreman' && member.role !== 'admin') {
+    throw new Error('Unauthorized')
+  }
+
+  const { error } = await supabase.from('shift_corrections').update({ status: 'approved' }).eq('id', correctionId)
+  if (error) throw new Error(error.message)
+  revalidatePath('/manage/timesheets')
+}
+
+export async function rejectCorrection(correctionId: string) {
+  const { supabase, member } = await requireMember()
+  if (member.role !== 'foreman' && member.role !== 'admin') {
+    throw new Error('Unauthorized')
+  }
+
+  const { error } = await supabase.from('shift_corrections').update({ status: 'rejected' }).eq('id', correctionId)
+  if (error) throw new Error(error.message)
+  revalidatePath('/manage/timesheets')
 }
