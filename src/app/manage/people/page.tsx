@@ -1,8 +1,14 @@
-import { createClient } from '@/utils/supabase/server'
+import { requireMember } from '@/lib/session'
+import { PageContainer, PageHeader, EmptyState } from '@/components/common/page'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { SubmitButton } from '@/components/common/submit-button'
 import { revalidatePath } from 'next/cache'
+import { Users } from 'lucide-react'
 
-export default async function PeoplePage() {
-  const supabase = await createClient()
+export default async function ManagePeoplePage() {
+  const { supabase } = await requireMember()
 
   const { data: members } = await supabase
     .from('members')
@@ -13,64 +19,89 @@ export default async function PeoplePage() {
     'use server'
     const memberId = formData.get('member_id') as string
     const rate = parseFloat(formData.get('rate') as string)
-    if (!memberId || isNaN(rate)) return
+    if (!memberId || isNaN(rate)) throw new Error('Invalid rate provided.')
     
-    const supabase = await createClient()
-    await supabase.rpc('set_hourly_rate', {
+    const { supabase } = await requireMember()
+    const { error } = await supabase.rpc('set_hourly_rate', {
       p_member_id: memberId,
       p_rate_cents: Math.round(rate * 100),
       p_reason: 'Updated via dashboard'
     })
+    if (error) throw new Error(error.message)
     revalidatePath('/manage/people')
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">People</h1>
+    <PageContainer wide>
+      <PageHeader 
+        title="Crew Members" 
+        description="Manage the team, roles, and set hourly pay rates."
+        actions={
+          <Button disabled title="Coming soon">
+            Invite Member
+          </Button>
+        }
+      />
       
-      <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-muted text-muted-foreground text-sm">
-            <tr>
-              <th className="p-3">Name</th>
-              <th className="p-3 hidden md:table-cell">Role</th>
-              <th className="p-3 hidden sm:table-cell">Status</th>
-              <th className="p-3">Hourly Rate</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {members?.map(member => (
-              <tr key={member.id}>
-                <td className="p-3">
-                  <div className="font-semibold">{member.first_name} {member.last_name}</div>
-                  <div className="text-xs text-muted-foreground">{member.email}</div>
-                </td>
-                <td className="p-3 hidden md:table-cell capitalize">{member.role}</td>
-                <td className="p-3 hidden sm:table-cell">
-                  {member.active ? (
-                    <span className="text-green-500 text-xs font-bold bg-green-500/10 px-2 py-1 rounded">ACTIVE</span>
-                  ) : (
-                    <span className="text-destructive text-xs font-bold bg-destructive/10 px-2 py-1 rounded">INACTIVE</span>
-                  )}
-                </td>
-                <td className="p-3">
-                  <form action={updateRate} className="flex gap-2">
-                    <input type="hidden" name="member_id" value={member.id} />
-                    <input 
-                      name="rate" 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="e.g. 25.00"
-                      className="w-24 p-1 text-sm border border-border bg-input rounded"
-                    />
-                    <button type="submit" className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Save</button>
-                  </form>
-                </td>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-muted text-muted-foreground text-sm border-b border-border">
+              <tr>
+                <th className="p-4 font-semibold">Name</th>
+                <th className="p-4 hidden md:table-cell font-semibold">Role</th>
+                <th className="p-4 hidden sm:table-cell font-semibold">Status</th>
+                <th className="p-4 font-semibold">Hourly Rate</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {members?.map((member: any) => (
+                <tr key={member.id} className="hover:bg-muted/20 transition-colors">
+                  <td className="p-4">
+                    <div className="font-semibold text-base">{member.first_name} {member.last_name}</div>
+                    <div className="text-sm text-muted-foreground mt-0.5">{member.email}</div>
+                  </td>
+                  <td className="p-4 hidden md:table-cell capitalize font-medium">{member.role}</td>
+                  <td className="p-4 hidden sm:table-cell">
+                    {member.active ? (
+                      <span className="text-green-500 text-xs font-bold bg-green-500/10 px-2 py-1 rounded uppercase tracking-wider">Active</span>
+                    ) : (
+                      <span className="text-destructive text-xs font-bold bg-destructive/10 px-2 py-1 rounded uppercase tracking-wider">Inactive</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <form action={updateRate} className="flex gap-2 items-center">
+                      <input type="hidden" name="member_id" value={member.id} />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                        <Input 
+                          name="rate" 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="0.00"
+                          className="w-24 pl-6"
+                        />
+                      </div>
+                      <SubmitButton size="sm" type="submit" variant="secondary" className="h-9">
+                        Save
+                      </SubmitButton>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!members?.length && (
+            <div className="p-8">
+              <EmptyState 
+                icon={Users}
+                title="No members found"
+                description="Your crew is empty."
+              />
+            </div>
+          )}
+        </div>
+      </Card>
+    </PageContainer>
   )
 }

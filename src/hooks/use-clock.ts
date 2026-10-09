@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { clockIn, clockOut } from '@/app/actions/time'
+import { clockIn, clockOut, startBreak, endBreak } from '@/app/actions/time'
 
 type LocationStatus = 'captured' | 'denied' | 'timeout'
 
@@ -78,5 +78,22 @@ export function useClock() {
     return res
   }
 
-  return { handleClockIn, handleClockOut, isPending, error, isRetry, setError }
+  const handleBreak = async (kind: 'start' | 'end') => {
+    setIsPending(true)
+    setError(null)
+    const opId = isRetry && operationId ? operationId : crypto.randomUUID()
+    setOperationId(opId)
+    const res = kind === 'start' ? await startBreak(opId) : await endBreak(opId)
+    setIsPending(false)
+    if (res.error) {
+      setError(res.error)
+      setIsRetry(true)
+    } else {
+      setIsRetry(false)
+      setOperationId(null)
+    }
+    return res
+  }
+
+  return { handleClockIn, handleClockOut, handleBreak, isPending, error, isRetry, setError }
 }

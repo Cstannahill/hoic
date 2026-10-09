@@ -1,12 +1,12 @@
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
-import { updateTaskStatus } from '@/app/actions/tasks'
+import { requireMember } from '@/lib/session'
+import { PageContainer, PageHeader, EmptyState } from '@/components/common/page'
+import { Card, CardContent } from '@/components/ui/card'
+import { CheckSquare } from 'lucide-react'
+import { PriorityBadge, StatusBadge } from '@/components/common/status-badge'
+import { TaskActions } from './task-actions'
 
 export default async function TasksPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
+  const { supabase, user } = await requireMember()
 
   const { data: tasks } = await supabase
     .from('tasks')
@@ -14,96 +14,61 @@ export default async function TasksPage() {
     .eq('assignee_id', user.id)
     .neq('status', 'done')
     .neq('status', 'cancelled')
-    .order('due_date', { ascending: true })
+    .order('priority', { ascending: false }) // lazy enum ordering
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-primary">My Tasks</h1>
+    <PageContainer>
+      <PageHeader 
+        title="My Tasks" 
+        description="Your assigned tasks that need attention."
+      />
       
-      <div className="grid gap-4">
-        {tasks?.map(task => (
-          <div key={task.id} className="bg-card p-4 rounded-lg shadow-sm border border-border flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-sm text-muted-foreground font-medium mb-1">
-                  {(task.properties as { name: string } | null)?.name || 'Unknown Property'}
+      <div className="space-y-4">
+        {tasks && tasks.length > 0 ? (
+          tasks.map((task: any) => (
+            <Card key={task.id} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="p-4 sm:p-6 pb-4">
+                  <div className="flex justify-between items-start mb-2 gap-4">
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground mb-1">
+                        {task.properties?.name || 'Unknown Property'}
+                      </div>
+                      <h3 className="font-semibold text-lg">{task.title}</h3>
+                      {task.due_date && <div className="text-sm text-[#d79921] mt-1">Due: {new Date(task.due_date).toLocaleDateString()}</div>}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <StatusBadge status={task.status} />
+                      <PriorityBadge priority={task.priority} />
+                    </div>
+                  </div>
+                  
+                  {task.notes && (
+                    <div className="mt-4 text-sm bg-muted/40 p-3 rounded-md border border-border italic text-muted-foreground">
+                      "{task.notes}"
+                    </div>
+                  )}
+                  {task.blocked_reason && task.status === 'blocked' && (
+                    <div className="mt-4 text-sm bg-destructive/10 p-3 rounded-md border border-destructive/20 text-destructive-foreground">
+                      <span className="font-semibold">Blocked:</span> {task.blocked_reason}
+                    </div>
+                  )}
                 </div>
-                <div className="font-semibold text-lg">{task.priority.toUpperCase()} Priority</div>
-                {task.due_date && <div className="text-sm text-amber-500">Due: {task.due_date}</div>}
-              </div>
-              <div className="px-2 py-1 rounded text-xs font-bold bg-secondary text-secondary-foreground uppercase">
-                {task.status.replace('_', ' ')}
-              </div>
-            </div>
-            
-            {task.notes && (
-              <div className="text-sm bg-muted/50 p-3 rounded-md italic">
-                "{task.notes}"
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-border mt-2">
-              {task.status === 'todo' && (
-                <form action={async () => {
-                  'use server'
-                  await updateTaskStatus(task.id, 'in_progress')
-                }}>
-                  <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-semibold hover:opacity-90">
-                    Start Work
-                  </button>
-                </form>
-              )}
-              
-              {task.status === 'in_progress' && (
-                <form action={async () => {
-                  'use server'
-                  await updateTaskStatus(task.id, 'done')
-                }}>
-                  <button className="bg-green-500 text-white px-4 py-2 rounded-md font-semibold hover:opacity-90">
-                    Finish Task
-                  </button>
-                </form>
-              )}
-
-              {(task.status === 'in_progress' || task.status === 'todo') && (
-                <form action={async (formData: FormData) => {
-                  'use server'
-                  const note = formData.get('notes') as string
-                  await updateTaskStatus(task.id, 'blocked', note)
-                }} className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <input 
-                    name="notes" 
-                    type="text" 
-                    placeholder="Reason for blocking..." 
-                    required 
-                    className="flex-1 min-w-[200px] border border-border p-2 rounded-md bg-input text-sm"
-                  />
-                  <button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md font-semibold hover:opacity-90">
-                    Block
-                  </button>
-                </form>
-              )}
-
-              {task.status === 'blocked' && (
-                <form action={async () => {
-                  'use server'
-                  await updateTaskStatus(task.id, 'in_progress')
-                }}>
-                  <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-semibold hover:opacity-90">
-                    Resume Work
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {!tasks?.length && (
-          <div className="text-center p-8 bg-muted/30 rounded-lg text-muted-foreground border border-dashed border-border">
-            You have no open tasks. Great job!
-          </div>
+                
+                <div className="bg-muted/30 px-4 py-3 sm:px-6 border-t border-border">
+                  <TaskActions task={task} />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <EmptyState 
+            icon={CheckSquare}
+            title="All caught up"
+            description="You have no open tasks assigned to you right now."
+          />
         )}
       </div>
-    </div>
+    </PageContainer>
   )
 }
