@@ -1,41 +1,38 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { AppNav } from "@/components/layout/app-nav";
+import { Toaster } from "@/components/ui/sonner";
+import { Freshness } from "@/components/layout/freshness";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "HOIC",
+  title: { default: "HOIC", template: "%s · HOIC" },
   description: "Timekeeping and crew management",
+  applicationName: "HOIC",
+  appleWebApp: { capable: true, title: "HOIC", statusBarStyle: "black-translucent" },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#282828",
+  colorScheme: "dark",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={cn("h-full dark antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
-    >
-      <body className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
+    <html lang="en" className={cn("dark antialiased font-sans", inter.variable)}>
+      <body className="flex min-h-dvh flex-col md:flex-row bg-background text-foreground">
         <AppNav />
-        <div className="flex-1 pb-16 md:pb-0 overflow-y-auto w-full">
+        <main className="flex-1 w-full min-w-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <Freshness />
           {children}
-        </div>
+        </main>
+        <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
   );

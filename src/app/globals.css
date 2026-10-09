@@ -32,11 +32,11 @@
 }
 
 :root, .dark {
-  --background: #2f2f2f;
+  --background: #282828;
   --foreground: #ffe9b1;
-  --card: #2f2f2f;
+  --card: #32302f;
   --card-foreground: #ffe9b1;
-  --popover: #2f2f2f;
+  --popover: #3c3836;
   --popover-foreground: #ffe9b1;
   --primary: #458588;
   --primary-foreground: #ffe9b1;
@@ -48,7 +48,7 @@
   --accent-foreground: #ffe9b1;
   --destructive: #cc241d;
   --border: #504945;
-  --input: #504945;
+  --input: #665c54;
   --ring: #458588;
   --radius: 0.5rem;
 }
@@ -63,4 +63,10 @@
   html {
     @apply font-sans;
   }
+}
+
+@layer base {
+  input, select, textarea { font-size: max(16px, 1rem); }
+  .tabular { font-variant-numeric: tabular-nums; }
+  button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
 }

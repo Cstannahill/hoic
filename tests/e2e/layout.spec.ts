@@ -4,7 +4,7 @@ test('shows mobile bottom nav with correct tabs', async ({ page, isMobile }) => 
   await page.goto('/login')
   await page.fill('input[name="email"]', 'test@example.com')
   await page.fill('input[name="password"]', 'testpassword123')
-  await page.click('button:has-text("Login")')
+  await page.click('button:has-text("Sign in")')
   await page.waitForURL('**/')
 
   if (isMobile) {

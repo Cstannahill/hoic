@@ -4,7 +4,7 @@ test('admin can access manage dashboard', async ({ page }) => {
   await page.goto('/login')
   await page.fill('input[name="email"]', 'test@example.com')
   await page.fill('input[name="password"]', 'testpassword123')
-  await page.click('button:has-text("Login")')
+  await page.click('button:has-text("Sign in")')
   await page.waitForURL('**/')
 
   await page.goto('/manage')
