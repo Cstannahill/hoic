@@ -66,7 +66,8 @@ export default async function DashboardPage() {
     .from('tasks')
     .select('id, title, priority, properties(name)')
     .eq('assignee_id', user.id)
-    .in('status', ['todo', 'in_progress'])
+    .neq('status', 'done')
+    .neq('status', 'cancelled')
     .order('priority', { ascending: false }) // lazy sort, DB uses enum ordering
     .limit(3)
 
