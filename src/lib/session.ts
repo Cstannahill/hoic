@@ -8,6 +8,7 @@ export type Role = 'worker' | 'foreman' | 'admin'
 export type Member = {
   id: string
   email: string
+  username: string
   first_name: string
   last_name: string
   role: Role
@@ -22,7 +23,7 @@ export const getSession = cache(async () => {
 
   const { data: member } = await supabase
     .from('members')
-    .select('id, email, first_name, last_name, role, active')
+    .select('id, email, username, first_name, last_name, role, active')
     .eq('id', user.id)
     .maybeSingle()
 

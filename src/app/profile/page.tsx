@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/app/actions/auth'
 import { CREW_TZ } from '@/lib/format'
+import { AccountSettingsForm } from '@/components/profile/account-settings-form'
 
 export const metadata: Metadata = { title: 'Profile' }
 
@@ -27,10 +28,13 @@ export default async function ProfilePage() {
           <div className="min-w-0">
             <p className="text-xl font-semibold truncate">{displayName(member)}</p>
             <p className="flex items-center gap-1.5 text-sm text-muted-foreground truncate"><Mail className="size-4" />{member.email}</p>
+            <p className="text-sm text-muted-foreground truncate">@{member.username}</p>
             <div className="mt-2"><RoleBadge role={member.role} /></div>
           </div>
         </CardContent>
       </Card>
+
+      <AccountSettingsForm currentUsername={member.username} />
 
       <Card className="mb-4">
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Clock className="size-4" /> Crew settings</CardTitle></CardHeader>

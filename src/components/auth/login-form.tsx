@@ -19,8 +19,8 @@ export function LoginForm({ initialError }: { initialError?: string }) {
         </div>
       )}
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" required defaultValue={state.email} className="h-12" />
+        <Label htmlFor="email">Username or Email</Label>
+        <Input id="email" name="email" type="text" autoCapitalize="none" autoComplete="username" required defaultValue={state.email} className="h-12" />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Password</Label>
