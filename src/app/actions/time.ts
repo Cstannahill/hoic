@@ -13,7 +13,6 @@ const FRIENDLY: Record<string, string> = {
   not_on_break: "You're not on a break.",
   property_archived: 'That property is archived. Pick another one.',
   operation_key_reused: 'That request conflicted with an earlier one. Please try again.',
-  no_rate: 'No hourly rate is set for you yet. Ask your foreman.',
 }
 
 function friendly(message: string) {
