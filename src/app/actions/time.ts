@@ -27,12 +27,12 @@ function done() {
   revalidatePath('/manage')
 }
 
-export async function clockIn(propertyId: string, lat: number | null, lng: number | null, acc: number | null, status: LocationStatus, operationId: string) {
+export async function clockIn(propertyId: string | null, lat: number | null, lng: number | null, acc: number | null, status: LocationStatus, operationId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('clock_in', {
     p_operation_id: operationId,
     p_payload_hash: `${propertyId}-${status}`,
-    p_property_id: propertyId,
+    p_property_id: propertyId || null,
     p_client_reported_at: new Date().toISOString(),
     p_latitude: lat,
     p_longitude: lng,

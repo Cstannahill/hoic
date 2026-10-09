@@ -2,7 +2,8 @@ import { requireMember } from '@/lib/session'
 import { PageContainer, PageHeader, EmptyState } from '@/components/common/page'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { MapPin, Plus } from 'lucide-react'
+import { MapPin } from 'lucide-react'
+import { CreatePropertyDialog } from '@/components/properties/create-property-dialog'
 
 export default async function ManagePropertiesPage() {
   const { supabase } = await requireMember()
@@ -18,11 +19,7 @@ export default async function ManagePropertiesPage() {
       <PageHeader 
         title="Properties" 
         description="Manage active job sites and locations."
-        actions={
-          <Button disabled title="Coming soon">
-            <Plus className="size-4 mr-2" /> Add Property
-          </Button>
-        }
+        actions={<CreatePropertyDialog />}
       />
 
       <div className="grid gap-4 md:grid-cols-2">

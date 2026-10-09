@@ -31,20 +31,21 @@ export async function updateTaskStatus(taskId: string, status: string, notes?: s
 export async function createTask(formData: FormData) {
   const supabase = await createClient()
   
-  const property_id = formData.get('property_id')?.toString()
+  let property_id = formData.get('property_id')?.toString()
+  if (property_id === 'none') property_id = undefined
   const assignee_id = formData.get('assignee_id')?.toString()
   const priority = formData.get('priority')?.toString()
   const due_date = formData.get('due_date')?.toString() || null
   const notes = formData.get('notes')?.toString() || null
 
-  if (!property_id || !assignee_id || !priority) {
+  if (!assignee_id || !priority) {
     throw new Error('Missing required fields')
   }
 
   const { error } = await supabase
     .from('tasks')
     .insert({
-      property_id,
+      property_id: property_id || null,
       assignee_id,
       priority,
       due_date: due_date ? due_date : null,

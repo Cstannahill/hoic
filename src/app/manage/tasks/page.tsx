@@ -46,10 +46,11 @@ export default async function ManageTasksPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Property</Label>
-                  <Select name="property_id" required>
+                  <Label>Property (Optional)</Label>
+                  <Select name="property_id">
                     <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">No specific property</SelectItem>
                       {properties?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

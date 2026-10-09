@@ -66,9 +66,8 @@ export function ClockPanel({
   }
 
   const onClockIn = async () => {
-    if (properties.length === 0) return setError('No active properties yet. Ask your foreman to add one.')
-    if (!selectedPropertyId) return setError('Pick the property you are working at.')
-    await run(() => handleClockIn(selectedPropertyId), 'Clocked in. Have a good shift!')
+    // If there are properties available and they selected none, pass null instead of empty string
+    await run(() => handleClockIn(selectedPropertyId === 'none' ? '' : selectedPropertyId), 'Clocked in. Have a good shift!')
   }
 
   const startedMs = optimisticShift ? +new Date(optimisticShift.started_at) : 0
@@ -127,24 +126,19 @@ export function ClockPanel({
         </>
       ) : (
         <>
-          {properties.length > 1 && (
-            <label className="w-full">
-              <span className="mb-1.5 block text-sm font-medium">Where are you working?</span>
-              <select
-                value={selectedPropertyId}
-                onChange={e => { setSelectedPropertyId(e.target.value); setError(null) }}
-                className="h-12 w-full rounded-md border border-input bg-secondary px-3"
-              >
-                <option value="" disabled>Select a property</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
-          )}
-          {properties.length === 1 && (
-            <p className="text-sm text-muted-foreground"><MapPin className="inline size-4 -mt-0.5" /> {properties[0].name}</p>
-          )}
+          <label className="w-full">
+            <span className="mb-1.5 block text-sm font-medium">Where are you working? (Optional)</span>
+            <select
+              value={selectedPropertyId || 'none'}
+              onChange={e => { setSelectedPropertyId(e.target.value); setError(null) }}
+              className="h-12 w-full rounded-md border border-input bg-secondary px-3"
+            >
+              <option value="none">No specific property</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
           <button
-            disabled={isPending || properties.length === 0}
+            disabled={isPending}
             onClick={onClockIn}
             className="flex size-44 flex-col items-center justify-center gap-2 rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-lg ring-8 ring-primary/20 transition hover:brightness-110 active:scale-95 disabled:opacity-50"
           >
