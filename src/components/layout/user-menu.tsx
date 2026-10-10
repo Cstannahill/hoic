@@ -22,9 +22,19 @@ type Props = {
   compact?: boolean
 }
 
+import { useRouter } from 'next/navigation'
+import { startTransition } from 'react'
+
 export function UserMenu({ firstName, lastName, email, role, compact }: Props) {
+  const router = useRouter()
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '?'
   const name = `${firstName} ${lastName}`.trim()
+
+  const handleSignOut = () => {
+    startTransition(() => {
+      signOut()
+    })
+  }
 
   return (
     <DropdownMenu>
@@ -51,11 +61,11 @@ export function UserMenu({ firstName, lastName, email, role, compact }: Props) {
           <span><RoleBadge role={role} /></span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href="/profile" />}>
-          <User className="size-4" /> Profile
+        <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
+          <User className="size-4 mr-2" /> Profile
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={() => signOut()}>
-          <LogOut className="size-4" /> Log out
+        <DropdownMenuItem variant="destructive" onClick={handleSignOut} className="cursor-pointer">
+          <LogOut className="size-4 mr-2" /> Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
