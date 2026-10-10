@@ -47,11 +47,11 @@ export function startOfCrewDay(now = new Date()) {
   return new Date(now.getTime() - elapsedMs)
 }
 
-/** Monday 00:00 in crew TZ (reporting_week_start = 1). */
+/** Saturday 00:00 in crew TZ (reporting_week_start = 6). */
 export function startOfCrewWeek(now = new Date()) {
   const dayStart = startOfCrewDay(now)
   const weekday = new Intl.DateTimeFormat('en-US', { timeZone: CREW_TZ, weekday: 'short' }).format(now)
-  const idx = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(weekday)
+  const idx = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'].indexOf(weekday)
   // Step back whole days; recompute day start to stay correct across DST.
   return startOfCrewDay(new Date(dayStart.getTime() - idx * 86_400_000 + 3_600_000 * 2))
 }

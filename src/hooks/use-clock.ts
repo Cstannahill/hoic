@@ -17,7 +17,7 @@ export function useClock() {
 
   const getLocation = async (): Promise<{ lat: number | null, lng: number | null, acc: number | null, status: LocationStatus }> => {
     // If config says don't require geolocation, skip it to save time/privacy
-    if (process.env.NEXT_PUBLIC_REQUIRE_GEOLOCATION === 'false') {
+    if (process.env.NEXT_PUBLIC_REQUIRE_GEOLOCATION !== 'true') {
       return { lat: null, lng: null, acc: null, status: 'captured' }
     }
 

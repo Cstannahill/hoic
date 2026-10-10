@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { LogOut, MapPin, Clock, Mail, ShieldCheck } from 'lucide-react'
+import { LogOut, Clock, Mail } from 'lucide-react'
 import { requireMember, displayName, initials } from '@/lib/session'
 import { PageContainer, PageHeader } from '@/components/common/page'
 import { RoleBadge } from '@/components/common/status-badge'
@@ -14,7 +14,6 @@ export const metadata: Metadata = { title: 'Profile' }
 
 export default async function ProfilePage() {
   const { member } = await requireMember()
-  const geoRequired = process.env.NEXT_PUBLIC_REQUIRE_GEOLOCATION !== 'false'
 
   return (
     <PageContainer>
@@ -36,26 +35,11 @@ export default async function ProfilePage() {
 
       <AccountSettingsForm currentUsername={member.username} />
 
-      <Card className="mb-4">
+      <Card className="mb-6">
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Clock className="size-4" /> Crew settings</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
           <p>Timezone: <span className="text-foreground">{CREW_TZ.replace('_', ' ')}</span></p>
-          <p>Pay weeks run Monday through Sunday.</p>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6">
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><MapPin className="size-4" /> Location</CardTitle></CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-2">
-          {geoRequired ? (
-            <>
-              <p>When you clock in, clock out, or take a break, HOIC asks your device for its location <strong className="text-foreground">once</strong>. It is rounded to about 100 m before being sent.</p>
-              <p>We never track you between those taps. Only admins can see locations, and they are deleted after 90 days.</p>
-              <p>If you decline, you can still clock in — the event is just marked &ldquo;location denied&rdquo;.</p>
-            </>
-          ) : (
-            <p className="flex items-center gap-2"><ShieldCheck className="size-4" /> Location capture is turned off for this crew.</p>
-          )}
+          <p>Pay weeks run Saturday to Friday. (Paid weekly on Friday for all hours from previous Friday, until current Friday.)</p>
         </CardContent>
       </Card>
 
