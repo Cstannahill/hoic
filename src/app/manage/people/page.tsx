@@ -12,7 +12,7 @@ export default async function ManagePeoplePage() {
 
   const { data: members } = await supabase
     .from('members')
-    .select('*')
+    .select('*, hourly_rates(rate_cents, effective_from)')
     .order('first_name', { ascending: true })
 
   async function updateRate(formData: FormData) {
@@ -55,40 +55,49 @@ export default async function ManagePeoplePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {members?.map((member: any) => (
-                <tr key={member.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="p-4">
-                    <div className="font-semibold text-base">{member.first_name} {member.last_name}</div>
-                    <div className="text-sm text-muted-foreground mt-0.5">{member.email}</div>
-                  </td>
-                  <td className="p-4 hidden md:table-cell capitalize font-medium">{member.role}</td>
-                  <td className="p-4 hidden sm:table-cell">
-                    {member.active ? (
-                      <span className="text-green-500 text-xs font-bold bg-green-500/10 px-2 py-1 rounded uppercase tracking-wider">Active</span>
-                    ) : (
-                      <span className="text-destructive text-xs font-bold bg-destructive/10 px-2 py-1 rounded uppercase tracking-wider">Inactive</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <form action={updateRate} className="flex gap-2 items-center">
-                      <input type="hidden" name="member_id" value={member.id} />
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
-                        <Input 
-                          name="rate" 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="0.00"
-                          className="w-24 pl-6"
-                        />
-                      </div>
-                      <SubmitButton size="sm" type="submit" variant="secondary" className="h-9">
-                        Save
-                      </SubmitButton>
-                    </form>
-                  </td>
-                </tr>
-              ))}
+              {members?.map((member: any) => {
+                const rates = member.hourly_rates || []
+                const currentRateCents = rates
+                  .filter((r: any) => new Date(r.effective_from).getTime() <= Date.now())
+                  .sort((a: any, b: any) => new Date(b.effective_from).getTime() - new Date(a.effective_from).getTime())[0]?.rate_cents || 0
+                const currentRate = (currentRateCents / 100).toFixed(2)
+
+                return (
+                  <tr key={member.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="p-4">
+                      <div className="font-semibold text-base">{member.first_name} {member.last_name}</div>
+                      <div className="text-sm text-muted-foreground mt-0.5">{member.email}</div>
+                    </td>
+                    <td className="p-4 hidden md:table-cell capitalize font-medium">{member.role}</td>
+                    <td className="p-4 hidden sm:table-cell">
+                      {member.active ? (
+                        <span className="text-green-500 text-xs font-bold bg-green-500/10 px-2 py-1 rounded uppercase tracking-wider">Active</span>
+                      ) : (
+                        <span className="text-destructive text-xs font-bold bg-destructive/10 px-2 py-1 rounded uppercase tracking-wider">Inactive</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <form action={updateRate} className="flex gap-2 items-center">
+                        <input type="hidden" name="member_id" value={member.id} />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                          <Input 
+                            name="rate" 
+                            type="number" 
+                            step="0.01" 
+                            defaultValue={currentRate}
+                            placeholder="0.00"
+                            className="w-24 pl-6"
+                          />
+                        </div>
+                        <SubmitButton size="sm" type="submit" variant="secondary" className="h-9">
+                          Save
+                        </SubmitButton>
+                      </form>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           {!members?.length && (
