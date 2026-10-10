@@ -62,14 +62,21 @@ export default async function DashboardPage() {
   const isStale = activeShift && (now.getTime() - new Date(activeShift.started_at).getTime() > (crew?.stale_shift_hours ?? 14) * 3600000)
 
   // 3. Open tasks
-  const { data: tasks } = await supabase
+  const { data: rawTasks } = await supabase
     .from('tasks')
-    .select('id, title, priority, properties(name)')
+    .select('id, title, priority, status, properties(name)')
     .eq('assignee_id', user.id)
     .neq('status', 'done')
     .neq('status', 'cancelled')
-    .order('priority', { ascending: false }) // lazy sort, DB uses enum ordering
-    .limit(3)
+    .limit(50)
+
+  // Sort: in_progress first, then by priority
+  const priorityWeights: Record<string, number> = { 'urgent': 4, 'high': 3, 'medium': 2, 'low': 1 }
+  const tasks = rawTasks?.sort((a, b) => {
+    if (a.status === 'in_progress' && b.status !== 'in_progress') return -1
+    if (b.status === 'in_progress' && a.status !== 'in_progress') return 1
+    return (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0)
+  }).slice(0, 3)
 
   // 4. Supplies count
   const { count: suppliesCount } = await supabase
@@ -128,10 +135,13 @@ export default async function DashboardPage() {
             {tasks && tasks.length > 0 ? (
               <ul className="space-y-3 flex-1">
                 {tasks.map(t => (
-                  <li key={t.id} className="flex justify-between items-start gap-4 p-3 rounded-lg bg-muted/40 border border-border">
+                  <li key={t.id} className={`flex justify-between items-start gap-4 p-3 rounded-lg border ${t.status === 'in_progress' ? 'bg-primary/10 border-primary/20' : 'bg-muted/40 border-border'}`}>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{t.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{(t.properties as any)?.name}</p>
+                      <p className="font-medium text-sm flex items-center gap-2">
+                        <span className="truncate">{t.title}</span>
+                        {t.status === 'in_progress' && <span className="text-[10px] uppercase font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">Active</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{(t.properties as any)?.name || 'No property'}</p>
                     </div>
                     <PriorityBadge priority={t.priority} />
                   </li>
