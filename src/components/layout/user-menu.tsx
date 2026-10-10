@@ -56,13 +56,11 @@ export function UserMenu({ firstName, lastName, email, role, compact }: Props) {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex flex-col gap-1">
-            <span className="font-semibold text-foreground">{name}</span>
-            <span className="text-xs font-normal text-muted-foreground truncate">{email}</span>
-            <span><RoleBadge role={role} /></span>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
+        <DropdownMenuLabel className="flex flex-col gap-1">
+          <span className="font-semibold text-foreground">{name}</span>
+          <span className="text-xs font-normal text-muted-foreground truncate">{email}</span>
+          <span><RoleBadge role={role} /></span>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push('/profile')} className="cursor-pointer">
           <User className="size-4 mr-2" /> Profile
