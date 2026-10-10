@@ -64,7 +64,7 @@ export default async function DashboardPage() {
   // 3. Open tasks
   const { data: rawTasks } = await supabase
     .from('tasks')
-    .select('id, title, priority, status, properties(name)')
+    .select('id, notes, priority, status, properties(name)')
     .eq('assignee_id', user.id)
     .neq('status', 'done')
     .neq('status', 'cancelled')
@@ -138,7 +138,7 @@ export default async function DashboardPage() {
                   <li key={t.id} className={`flex justify-between items-start gap-4 p-3 rounded-lg border ${t.status === 'in_progress' ? 'bg-primary/10 border-primary/20' : 'bg-muted/40 border-border'}`}>
                     <div className="min-w-0">
                       <p className="font-medium text-sm flex items-center gap-2">
-                        <span className="truncate">{t.title}</span>
+                        <span className="truncate">{t.notes || 'No description'}</span>
                         {t.status === 'in_progress' && <span className="text-[10px] uppercase font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">Active</span>}
                       </p>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{(t.properties as any)?.name || 'No property'}</p>
