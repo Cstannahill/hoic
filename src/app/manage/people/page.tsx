@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { SubmitButton } from '@/components/common/submit-button'
 import { revalidatePath } from 'next/cache'
 import { Users } from 'lucide-react'
+import { CreateMemberDialog } from '@/components/people/create-member-dialog'
 
 export default async function ManagePeoplePage() {
   const { supabase } = await requireMember()
@@ -37,9 +38,7 @@ export default async function ManagePeoplePage() {
         title="Crew Members" 
         description="Manage the team, roles, and set hourly pay rates."
         actions={
-          <Button disabled title="Coming soon">
-            Invite Member
-          </Button>
+          <CreateMemberDialog />
         }
       />
       
