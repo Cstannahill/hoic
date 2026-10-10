@@ -8,6 +8,7 @@ import { useClock } from '@/hooks/use-clock'
 import { formatDuration, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useSync } from '@/components/providers/sync-provider'
+import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 
 type Property = { id: string; name: string }
 type ActiveShift = { id: string; status: 'working' | 'on_break'; started_at: string; property_name?: string | null }
@@ -26,6 +27,7 @@ export function ClockPanel({
   const { handleClockIn, handleClockOut, handleBreak, isPending, error, isRetry, setError } = useClock()
   const { mutations } = useSync()
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(properties.length === 1 ? properties[0].id : '')
+  const [clockOutConfirmOpen, setClockOutConfirmOpen] = useState(false)
   const router = useRouter()
 
   // Compute optimistic active shift based on offline mutations
@@ -114,8 +116,10 @@ export function ClockPanel({
               tone="danger"
               disabled={isPending}
               onClick={() => {
-                if (optimisticShift?.status === 'on_break' || window.confirm('Clock out and end your shift?')) {
+                if (optimisticShift?.status === 'on_break') {
                   run(handleClockOut, 'Clocked out. Nice work!')
+                } else {
+                  setClockOutConfirmOpen(true)
                 }
               }}
               icon={LogOut}
@@ -123,6 +127,15 @@ export function ClockPanel({
               {isPending ? 'Saving.' : isRetry ? retryLabel : 'Clock out'}
             </BigButton>
           </div>
+          <ConfirmationDialog
+            open={clockOutConfirmOpen}
+            onOpenChange={setClockOutConfirmOpen}
+            title="End shift?"
+            description="Are you sure you want to clock out and end your shift?"
+            confirmLabel="Clock Out"
+            variant="destructive"
+            onConfirm={() => run(handleClockOut, 'Clocked out. Nice work!')}
+          />
         </>
       ) : (
         <>

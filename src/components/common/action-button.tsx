@@ -1,10 +1,11 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { ConfirmationDialog } from '@/components/common/confirmation-dialog'
 
 type ButtonProps = React.ComponentProps<typeof Button>
 
@@ -25,29 +26,51 @@ export function ActionButton({
   confirm?: string
 }) {
   const [pending, startTransition] = useTransition()
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const router = useRouter()
 
+  const executeAction = () => {
+    startTransition(async () => {
+      try {
+        await action()
+        if (successMessage) toast.success(successMessage)
+        router.refresh()
+      } catch (e) {
+        toast.error(friendlyError(e))
+      }
+    })
+  }
+
   return (
-    <Button
-      {...props}
-      disabled={disabled || pending}
-      aria-busy={pending}
-      onClick={() => {
-        if (confirm && !window.confirm(confirm)) return
-        startTransition(async () => {
-          try {
-            await action()
-            if (successMessage) toast.success(successMessage)
-            router.refresh()
-          } catch (e) {
-            toast.error(friendlyError(e))
+    <>
+      <Button
+        {...props}
+        disabled={disabled || pending}
+        aria-busy={pending}
+        onClick={() => {
+          if (confirm) {
+            setConfirmOpen(true)
+          } else {
+            executeAction()
           }
-        })
-      }}
-    >
-      {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
-      {children}
-    </Button>
+        }}
+      >
+        {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
+        {children}
+      </Button>
+
+      {confirm && (
+        <ConfirmationDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title="Confirm action"
+          description={confirm}
+          confirmLabel="Continue"
+          variant={props.variant === 'destructive' ? 'destructive' : 'default'}
+          onConfirm={executeAction}
+        />
+      )}
+    </>
   )
 }
 
