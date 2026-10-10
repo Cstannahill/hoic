@@ -55,9 +55,8 @@ export async function createMember(formData: FormData) {
 
   const userId = authData.user.id
 
-  // 2. Insert into members table
-  const supabase = await createClient()
-  const { error: memberError } = await supabase.from('members').insert({
+  // 2. Insert into members table using admin client to bypass RLS
+  const { error: memberError } = await adminClient.from('members').insert({
     id: userId,
     email: fakeEmail,
     first_name: firstName,
@@ -78,6 +77,7 @@ export async function createMember(formData: FormData) {
 
   // 3. Set hourly rate if provided
   if (!isNaN(rate) && rate > 0) {
+    const supabase = await createClient()
     await supabase.rpc('set_hourly_rate', {
       p_member_id: userId,
       p_rate_cents: Math.round(rate * 100),
