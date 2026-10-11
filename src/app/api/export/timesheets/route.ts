@@ -1,9 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { startOfCrewWeek } from '@/lib/format'
+import { getCrewWeekRange } from '@/lib/format'
 import { summarize } from '@/features/reporting/shifts'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -14,13 +14,18 @@ export async function GET() {
     return new Response('Forbidden', { status: 403 })
   }
 
+  const { searchParams } = new URL(request.url)
+  const offset = Math.min(0, parseInt(searchParams.get('offset') || '0', 10) || 0)
+  const isCurrentWeek = offset === 0
+
   const now = new Date()
-  const weekStart = startOfCrewWeek(now)
+  const { start: weekStart, end: weekEnd } = getCrewWeekRange(offset, now)
 
   const { data: shifts } = await supabase
     .from('shifts')
     .select('*, members(id, first_name, last_name, role), clock_events(event_type, server_recorded_at)')
     .gte('started_at', weekStart.toISOString())
+    .lt('started_at', weekEnd.toISOString())
     .eq('status', 'closed')
 
   const memberTotals = new Map<number, { member: any, shifts: any[], ms: number, cents: number }>()
@@ -34,8 +39,9 @@ export async function GET() {
     current.shifts.push(shift)
   }
 
+  const windowEndMs = isCurrentWeek ? now.getTime() : weekEnd.getTime()
   for (const group of memberTotals.values()) {
-    const stats = summarize(group.shifts, { startMs: weekStart.getTime(), endMs: Infinity }, now.getTime())
+    const stats = summarize(group.shifts, { startMs: weekStart.getTime(), endMs: windowEndMs }, windowEndMs)
     group.ms = stats.ms
     group.cents = stats.cents
   }
@@ -59,12 +65,14 @@ export async function GET() {
   }
 
   const csvContent = rows.map(e => e.join(',')).join('\n')
+  const startDateStr = weekStart.toISOString().split('T')[0]
+  const endDateStr = new Date(weekEnd.getTime() - 86_400_000).toISOString().split('T')[0]
 
   return new NextResponse(csvContent, {
     status: 200,
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="timesheets_${weekStart.toISOString().split('T')[0]}.csv"`
+      'Content-Disposition': `attachment; filename="timesheets_${startDateStr}_to_${endDateStr}.csv"`
     }
   })
 }

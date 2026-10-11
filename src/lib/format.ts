@@ -56,6 +56,14 @@ export function startOfCrewWeek(now = new Date()) {
   return startOfCrewDay(new Date(dayStart.getTime() - idx * 86_400_000 + 3_600_000 * 2))
 }
 
+/** Get start and end of crew week offset by N weeks (0 = current, -1 = last week, etc.) */
+export function getCrewWeekRange(offsetWeeks = 0, now = new Date()) {
+  const currentWeekStart = startOfCrewWeek(now)
+  const start = startOfCrewDay(new Date(currentWeekStart.getTime() + offsetWeeks * 7 * 86_400_000 + 3_600_000 * 2))
+  const end = startOfCrewDay(new Date(start.getTime() + 7 * 86_400_000 + 3_600_000 * 2))
+  return { start, end }
+}
+
 export function greeting(now = new Date()) {
   const h = +new Intl.DateTimeFormat('en-US', { timeZone: CREW_TZ, hour: 'numeric', hourCycle: 'h23' }).format(now)
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
