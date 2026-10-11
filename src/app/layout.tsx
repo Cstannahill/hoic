@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 
 import { PWAProvider } from "@/components/providers/pwa-provider";
 import { SyncProvider } from "@/components/providers/sync-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Toaster position="top-center" richColors closeButton />
           </SyncProvider>
         </PWAProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
