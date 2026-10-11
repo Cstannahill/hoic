@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { uploadPropertyImage } from '@/app/actions/properties'
+import { uploadPropertyImage, deletePropertyImage } from '@/app/actions/properties'
 import { formatCents } from '@/lib/format'
 import { toast } from 'sonner'
-import { Loader2, Upload } from 'lucide-react'
+import { Loader2, Upload, Trash2 } from 'lucide-react'
 
 // You might need to adjust NEXT_PUBLIC_SUPABASE_URL to your actual env variable
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321' 
@@ -25,6 +25,7 @@ export function PropertyDetailsClient({
   initialImages: any[]
 }) {
   const [isUploading, setIsUploading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'before' | 'after'>('before')
 
   const beforeImages = initialImages.filter(img => img.stage === 'before')
@@ -36,7 +37,11 @@ export function PropertyDetailsClient({
 
     try {
       setIsUploading(true)
-      await uploadPropertyImage(propertyId, activeTab, file)
+      const formData = new FormData()
+      formData.append('propertyId', propertyId)
+      formData.append('stage', activeTab)
+      formData.append('file', file)
+      await uploadPropertyImage(formData)
       toast.success('Image uploaded successfully')
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload image')
@@ -44,6 +49,18 @@ export function PropertyDetailsClient({
       setIsUploading(false)
       // Reset the input
       e.target.value = ''
+    }
+  }
+
+  const handleDelete = async (imageId: string, storagePath: string) => {
+    try {
+      setDeletingId(imageId)
+      await deletePropertyImage(imageId, storagePath, propertyId)
+      toast.success('Image deleted')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete image')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -103,13 +120,26 @@ export function PropertyDetailsClient({
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {beforeImages.map(img => (
-                    <div key={img.id} className="aspect-square relative rounded-md overflow-hidden bg-muted">
+                    <div key={img.id} className="aspect-square relative rounded-md overflow-hidden bg-muted group">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={getImageUrl(img.storage_path)} 
                         alt="Before" 
                         className="object-cover w-full h-full"
                       />
+                      <Button
+                        variant="destructive"
+                        size="icon-xs"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={deletingId === img.id}
+                        onClick={() => handleDelete(img.id, img.storage_path)}
+                      >
+                        {deletingId === img.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3" />
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -122,13 +152,26 @@ export function PropertyDetailsClient({
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {afterImages.map(img => (
-                    <div key={img.id} className="aspect-square relative rounded-md overflow-hidden bg-muted">
+                    <div key={img.id} className="aspect-square relative rounded-md overflow-hidden bg-muted group">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={getImageUrl(img.storage_path)} 
                         alt="After" 
                         className="object-cover w-full h-full"
                       />
+                      <Button
+                        variant="destructive"
+                        size="icon-xs"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={deletingId === img.id}
+                        onClick={() => handleDelete(img.id, img.storage_path)}
+                      >
+                        {deletingId === img.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3" />
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>

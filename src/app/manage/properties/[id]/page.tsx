@@ -5,15 +5,15 @@ import { breakIntervals, RawShift } from '@/features/reporting/shifts'
 import { calculateShiftEarnings } from '@/features/reporting/math'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
-export default async function PropertyDetailsPage({ params }: { params: { id: string } }) {
+export default async function PropertyDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id: propertyId } = await params
   const { supabase } = await requireMember()
-  
-  // Await the params object itself before accessing id if Next.js 15
-  // Actually params.id is synchronously accessible in Next 14, but we can do await if needed, let's just use it
-  const propertyId = params.id
 
   const [
     { data: property },
@@ -21,7 +21,7 @@ export default async function PropertyDetailsPage({ params }: { params: { id: st
     { data: suppliesData },
     { data: imagesData }
   ] = await Promise.all([
-    supabase.from('properties').select('*').eq('id', propertyId).single(),
+    supabase.from('properties').select('*').eq('id', propertyId).maybeSingle(),
     supabase.from('shifts').select('*, clock_events(*)').eq('property_id', propertyId).eq('status', 'closed'),
     supabase.from('supplies').select('cost_cents').eq('property_id', propertyId),
     supabase.from('property_images').select('*').eq('property_id', propertyId).order('created_at', { ascending: false })
