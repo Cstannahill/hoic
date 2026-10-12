@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Clock, Calendar } from 'lucide-react'
 import { paidMs, centsFor, type RawShift } from '@/features/reporting/shifts'
-import { CorrectionForm } from '@/components/time/correction-form'
+import { EditShiftDialog } from '@/components/time/edit-shift-dialog'
 
 export default async function TimePage() {
   const { supabase, user } = await requireMember()
@@ -141,8 +141,14 @@ export default async function TimePage() {
                         <div className="text-xs text-muted-foreground font-medium">{formatHours(ms)}h</div>
                       </div>
                       {shift.status === 'closed' && (
-                        <CorrectionForm shiftId={shift.id.toString()} />
+                        <EditShiftDialog
+                          shiftId={shift.id.toString()}
+                          startedAt={shift.started_at}
+                          endedAt={shift.ended_at}
+                          propertyName={shift.properties?.name}
+                        />
                       )}
+
                     </div>
                   </div>
                 ))}

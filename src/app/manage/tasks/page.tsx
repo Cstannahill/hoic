@@ -1,14 +1,9 @@
 import { requireMember } from '@/lib/session'
 import { PageContainer, PageHeader, EmptyState, SectionTitle } from '@/components/common/page'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent } from '@/components/ui/card'
 import { CheckSquare } from 'lucide-react'
-import { createTask } from '@/app/actions/tasks'
 import { PriorityBadge, StatusBadge } from '@/components/common/status-badge'
+import { CreateTaskForm } from '@/components/tasks/create-task-form'
 
 export default async function ManageTasksPage() {
   const { supabase } = await requireMember()
@@ -30,72 +25,10 @@ export default async function ManageTasksPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Create Task Form */}
         <div className="w-full lg:w-[400px] shrink-0">
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Create Assignment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form action={async (formData) => {
-                'use server'
-                await createTask(formData)
-              }} className="flex flex-col gap-4">
-                
-                <div className="space-y-1.5">
-                  <Label>Title</Label>
-                  <Input name="title" required placeholder="Short description..." />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Property (Optional)</Label>
-                  <Select name="property_id">
-                    <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No specific property</SelectItem>
-                      {properties?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <Label>Assignee</Label>
-                  <Select name="assignee_id" required>
-                    <SelectTrigger><SelectValue placeholder="Select crew member" /></SelectTrigger>
-                    <SelectContent>
-                      {members?.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.first_name} {m.last_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Priority</Label>
-                    <Select name="priority" defaultValue="medium" required>
-                      <SelectTrigger><SelectValue placeholder="Priority" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Due Date</Label>
-                    <Input name="due_date" type="date" />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Notes</Label>
-                  <Textarea name="notes" rows={3} placeholder="Detailed instructions..." />
-                </div>
-
-                <Button type="submit" className="w-full mt-2">
-                  Assign Task
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <CreateTaskForm
+            properties={properties?.map((p) => ({ id: p.id, name: p.name })) || []}
+            members={members?.map((m) => ({ id: m.id, first_name: m.first_name, last_name: m.last_name })) || []}
+          />
         </div>
 
         {/* Task List */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 import { signIn, type LoginState } from '@/app/actions/login'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,13 @@ import { Button } from '@/components/ui/button'
 export function LoginForm({ initialError }: { initialError?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signIn, { error: initialError })
   const [show, setShow] = useState(false)
+  const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    if (state.email) {
+      setEmail(state.email)
+    }
+  }, [state.email])
 
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
@@ -20,7 +27,17 @@ export function LoginForm({ initialError }: { initialError?: string }) {
       )}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Username or Email</Label>
-        <Input id="email" name="email" type="text" autoCapitalize="none" autoComplete="username" required defaultValue={state.email} className="h-12" />
+        <Input
+          id="email"
+          name="email"
+          type="text"
+          autoCapitalize="none"
+          autoComplete="username"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-12"
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Password</Label>
