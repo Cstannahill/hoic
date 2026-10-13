@@ -7,6 +7,7 @@ import { summarize } from '@/features/reporting/shifts'
 import { Download, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { WeeklyLaborSummary } from '@/components/timesheets/weekly-labor-summary'
 
 export default async function ManageTimesheetsPage({
   searchParams,
@@ -52,6 +53,9 @@ export default async function ManageTimesheetsPage({
   }
 
   const sortedGroups = Array.from(memberTotals.values()).sort((a, b) => b.ms - a.ms)
+  const totalLaborMs = sortedGroups.reduce((acc, g) => acc + g.ms, 0)
+  const totalLaborCents = sortedGroups.reduce((acc, g) => acc + g.cents, 0)
+  const totalCompletedShifts = sortedGroups.reduce((acc, g) => acc + g.shifts.length, 0)
 
   // Fetch pending corrections (shown when viewing current period)
   const { data: corrections } = await supabase
@@ -150,6 +154,16 @@ export default async function ManageTimesheetsPage({
             ))}
           </div>
         </div>
+      )}
+
+      {sortedGroups.length > 0 && (
+        <WeeklyLaborSummary
+          isCurrentWeek={isCurrentWeek}
+          totalLaborCents={totalLaborCents}
+          totalLaborMs={totalLaborMs}
+          workersCount={sortedGroups.length}
+          shiftsCount={totalCompletedShifts}
+        />
       )}
 
       <h2 className="text-lg font-bold mb-4">Crew Totals</h2>
