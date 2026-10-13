@@ -26,9 +26,16 @@ interface MemberOption {
 interface CreateTaskFormProps {
   properties: PropertyOption[]
   members: MemberOption[]
+  onSuccess?: () => void
+  inDialog?: boolean
 }
 
-export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
+export function CreateTaskForm({
+  properties,
+  members,
+  onSuccess,
+  inDialog = false,
+}: CreateTaskFormProps) {
   const [notes, setNotes] = useState('')
   const [isPending, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement | null>(null)
@@ -59,6 +66,7 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
         toast.success('Task assigned successfully!')
         form.reset()
         setNotes('')
+        onSuccess?.()
       } catch (err: any) {
         toast.error(err.message || 'Failed to assign task.')
       }
@@ -86,104 +94,112 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
     { value: 'urgent', label: 'Urgent' },
   ]
 
+  const formContent = (
+    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="title">Title</Label>
+        <Input id="title" name="title" required placeholder="Short description..." />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="property_id">Property (Optional)</Label>
+        <Select name="property_id" items={propertyItems}>
+          <SelectTrigger id="property_id">
+            <SelectValue placeholder="Select property" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none" label="No specific property">
+              No specific property
+            </SelectItem>
+            {properties?.map((p) => (
+              <SelectItem key={p.id} value={p.id.toString()} label={p.name}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="assignee_id">Assignee</Label>
+        <Select name="assignee_id" items={memberItems} required>
+          <SelectTrigger id="assignee_id">
+            <SelectValue placeholder="Select crew member" />
+          </SelectTrigger>
+          <SelectContent>
+            {members?.map((m) => {
+              const fullName = `${m.first_name} ${m.last_name}`.trim()
+              return (
+                <SelectItem key={m.id} value={m.id.toString()} label={fullName}>
+                  {fullName}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="priority">Priority</Label>
+          <Select name="priority" defaultValue="medium" items={priorityItems} required>
+            <SelectTrigger id="priority">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low" label="Low">Low</SelectItem>
+              <SelectItem value="medium" label="Medium">Medium</SelectItem>
+              <SelectItem value="high" label="High">High</SelectItem>
+              <SelectItem value="urgent" label="Urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="due_date">Due Date</Label>
+          <Input id="due_date" name="due_date" type="date" />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="notes">Notes</Label>
+          <VoiceDictationButton onTranscript={handleTranscript} disabled={isPending} />
+        </div>
+        <Textarea
+          ref={notesRef}
+          id="notes"
+          name="notes"
+          rows={3}
+          placeholder="Detailed instructions..."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+
+      <Button type="submit" disabled={isPending} className="w-full mt-2">
+        {isPending ? (
+          <>
+            <Loader2 className="size-4 animate-spin mr-2" />
+            Assigning Task…
+          </>
+        ) : (
+          'Assign Task'
+        )}
+      </Button>
+    </form>
+  )
+
+  if (inDialog) {
+    return formContent
+  }
+
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Create Assignment</CardTitle>
       </CardHeader>
       <CardContent>
-        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" required placeholder="Short description..." />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="property_id">Property (Optional)</Label>
-            <Select name="property_id" items={propertyItems}>
-              <SelectTrigger id="property_id">
-                <SelectValue placeholder="Select property" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" label="No specific property">
-                  No specific property
-                </SelectItem>
-                {properties?.map((p) => (
-                  <SelectItem key={p.id} value={p.id.toString()} label={p.name}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="assignee_id">Assignee</Label>
-            <Select name="assignee_id" items={memberItems} required>
-              <SelectTrigger id="assignee_id">
-                <SelectValue placeholder="Select crew member" />
-              </SelectTrigger>
-              <SelectContent>
-                {members?.map((m) => {
-                  const fullName = `${m.first_name} ${m.last_name}`.trim()
-                  return (
-                    <SelectItem key={m.id} value={m.id.toString()} label={fullName}>
-                      {fullName}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="priority">Priority</Label>
-              <Select name="priority" defaultValue="medium" items={priorityItems} required>
-                <SelectTrigger id="priority">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low" label="Low">Low</SelectItem>
-                  <SelectItem value="medium" label="Medium">Medium</SelectItem>
-                  <SelectItem value="high" label="High">High</SelectItem>
-                  <SelectItem value="urgent" label="Urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input id="due_date" name="due_date" type="date" />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="notes">Notes</Label>
-              <VoiceDictationButton onTranscript={handleTranscript} disabled={isPending} />
-            </div>
-            <Textarea
-              ref={notesRef}
-              id="notes"
-              name="notes"
-              rows={3}
-              placeholder="Detailed instructions..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          <Button type="submit" disabled={isPending} className="w-full mt-2">
-            {isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin mr-2" />
-                Assigning Task…
-              </>
-            ) : (
-              'Assign Task'
-            )}
-          </Button>
-        </form>
+        {formContent}
       </CardContent>
     </Card>
   )
