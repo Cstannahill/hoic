@@ -101,4 +101,78 @@ describe('CreateTaskForm', () => {
       expect(notesTextarea.value).toBe('')
     })
   })
+
+  it('displays member name instead of ID in trigger when crew member is selected', async () => {
+    render(<CreateTaskForm properties={mockProperties} members={mockMembers} />)
+
+    const assigneeTrigger = screen.getByRole('combobox', { name: /assignee/i })
+    expect(assigneeTrigger).toHaveTextContent('Select crew member')
+
+    // Open the assignee select popup
+    fireEvent.click(assigneeTrigger)
+
+    // Select John Doe
+    const option = await screen.findByRole('option', { name: 'John Doe' })
+    fireEvent.pointerDown(option)
+    fireEvent.click(option)
+
+    // Trigger should display the human-readable full name, never the raw ID
+    expect(assigneeTrigger).toHaveTextContent('John Doe')
+    expect(assigneeTrigger).not.toHaveTextContent('m1')
+  })
+
+  it('displays property name instead of ID in trigger when property is selected', async () => {
+    render(<CreateTaskForm properties={mockProperties} members={mockMembers} />)
+
+    const propertyTrigger = screen.getByRole('combobox', { name: /property/i })
+    expect(propertyTrigger).toHaveTextContent('Select property')
+
+    // Open property select popup
+    fireEvent.click(propertyTrigger)
+
+    // Select Oakwood Apartments
+    const option = await screen.findByRole('option', { name: 'Oakwood Apartments' })
+    fireEvent.pointerDown(option)
+    fireEvent.click(option)
+
+    // Trigger should display the property name, never the raw ID
+    expect(propertyTrigger).toHaveTextContent('Oakwood Apartments')
+    expect(propertyTrigger).not.toHaveTextContent('1')
+  })
+
+  it('submits selected assignee_id and property_id values in FormData', async () => {
+    render(<CreateTaskForm properties={mockProperties} members={mockMembers} />)
+
+    // Select assignee John Doe (m1)
+    const assigneeTrigger = screen.getByRole('combobox', { name: /assignee/i })
+    fireEvent.click(assigneeTrigger)
+    const memberOption = await screen.findByRole('option', { name: 'John Doe' })
+    fireEvent.pointerDown(memberOption)
+    fireEvent.click(memberOption)
+
+    // Select property Oakwood Apartments (1)
+    const propertyTrigger = screen.getByRole('combobox', { name: /property/i })
+    fireEvent.click(propertyTrigger)
+    const propOption = await screen.findByRole('option', { name: 'Oakwood Apartments' })
+    fireEvent.pointerDown(propOption)
+    fireEvent.click(propOption)
+
+    // Set title
+    const titleInput = screen.getByLabelText(/title/i)
+    fireEvent.change(titleInput, { target: { value: 'Repair door' } })
+
+    const submitBtn = screen.getByRole('button', { name: /assign task/i })
+    const form = submitBtn.closest('form')!
+    await act(async () => {
+      fireEvent.submit(form)
+    })
+
+    await waitFor(() => {
+      expect(createTask).toHaveBeenCalled()
+      const formDataArg = vi.mocked(createTask).mock.calls[0][0] as FormData
+      expect(formDataArg.get('assignee_id')).toBe('m1')
+      expect(formDataArg.get('property_id')).toBe('1')
+      expect(formDataArg.get('title')).toBe('Repair door')
+    })
+  })
 })

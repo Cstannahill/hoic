@@ -55,29 +55,44 @@ export default async function SuppliesPage() {
             </div>
             {properties.length > 0 && (
               <div className="w-full sm:w-48">
-                <Select name="property_id">
+                <Select
+                  name="property_id"
+                  items={[
+                    { value: '', label: 'Any location' },
+                    ...properties.map(p => ({ value: p.id.toString(), label: p.name })),
+                  ]}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any location</SelectItem>
+                    <SelectItem value="" label="Any location">Any location</SelectItem>
                     {properties.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id.toString()} label={p.name}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
             <div className="w-full sm:w-40">
-              <Select name="urgency" defaultValue="medium">
+              <Select
+                name="urgency"
+                defaultValue="medium"
+                items={[
+                  { value: 'low', label: 'Low Priority' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High Priority' },
+                  { value: 'urgent', label: 'Urgent' },
+                ]}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Urgency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low Priority</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low" label="Low Priority">Low Priority</SelectItem>
+                  <SelectItem value="medium" label="Medium">Medium</SelectItem>
+                  <SelectItem value="high" label="High Priority">High Priority</SelectItem>
+                  <SelectItem value="urgent" label="Urgent">Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>

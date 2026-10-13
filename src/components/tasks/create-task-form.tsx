@@ -65,6 +65,27 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
     })
   }
 
+  const propertyItems = [
+    { value: 'none', label: 'No specific property' },
+    ...(properties?.map((p) => ({
+      value: p.id.toString(),
+      label: p.name,
+    })) || []),
+  ]
+
+  const memberItems =
+    members?.map((m) => ({
+      value: m.id.toString(),
+      label: `${m.first_name} ${m.last_name}`.trim(),
+    })) || []
+
+  const priorityItems = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+    { value: 'urgent', label: 'Urgent' },
+  ]
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -79,14 +100,16 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
 
           <div className="space-y-1.5">
             <Label htmlFor="property_id">Property (Optional)</Label>
-            <Select name="property_id">
+            <Select name="property_id" items={propertyItems}>
               <SelectTrigger id="property_id">
                 <SelectValue placeholder="Select property" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No specific property</SelectItem>
+                <SelectItem value="none" label="No specific property">
+                  No specific property
+                </SelectItem>
                 {properties?.map((p) => (
-                  <SelectItem key={p.id} value={p.id.toString()}>
+                  <SelectItem key={p.id} value={p.id.toString()} label={p.name}>
                     {p.name}
                   </SelectItem>
                 ))}
@@ -96,16 +119,19 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
 
           <div className="space-y-1.5">
             <Label htmlFor="assignee_id">Assignee</Label>
-            <Select name="assignee_id" required>
+            <Select name="assignee_id" items={memberItems} required>
               <SelectTrigger id="assignee_id">
                 <SelectValue placeholder="Select crew member" />
               </SelectTrigger>
               <SelectContent>
-                {members?.map((m) => (
-                  <SelectItem key={m.id} value={m.id.toString()}>
-                    {m.first_name} {m.last_name}
-                  </SelectItem>
-                ))}
+                {members?.map((m) => {
+                  const fullName = `${m.first_name} ${m.last_name}`.trim()
+                  return (
+                    <SelectItem key={m.id} value={m.id.toString()} label={fullName}>
+                      {fullName}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -113,15 +139,15 @@ export function CreateTaskForm({ properties, members }: CreateTaskFormProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="priority">Priority</Label>
-              <Select name="priority" defaultValue="medium" required>
+              <Select name="priority" defaultValue="medium" items={priorityItems} required>
                 <SelectTrigger id="priority">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="low" label="Low">Low</SelectItem>
+                  <SelectItem value="medium" label="Medium">Medium</SelectItem>
+                  <SelectItem value="high" label="High">High</SelectItem>
+                  <SelectItem value="urgent" label="Urgent">Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>

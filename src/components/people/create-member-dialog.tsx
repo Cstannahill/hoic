@@ -74,14 +74,23 @@ export function CreateMemberDialog() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="role">Role *</Label>
-              <Select name="role" defaultValue="worker" required>
+              <Select
+                name="role"
+                defaultValue="worker"
+                items={[
+                  { value: 'worker', label: 'Worker' },
+                  { value: 'foreman', label: 'Foreman' },
+                  { value: 'admin', label: 'Admin' },
+                ]}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="worker">Worker</SelectItem>
-                  <SelectItem value="foreman">Foreman</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="worker" label="Worker">Worker</SelectItem>
+                  <SelectItem value="foreman" label="Foreman">Foreman</SelectItem>
+                  <SelectItem value="admin" label="Admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
